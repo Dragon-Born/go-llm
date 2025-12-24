@@ -25,9 +25,12 @@ type Builder struct {
 	temperature *float64
 	thinking    ThinkingLevel
 
-	// Tool calling
+	// Tool calling (function tools)
 	tools        []Tool
 	toolHandlers map[string]ToolHandler
+
+	// Built-in tools (Responses API: web_search, file_search, code_interpreter, mcp)
+	builtinTools []BuiltinTool
 
 	// Vision
 	images []ImageInput
@@ -324,6 +327,10 @@ type ResponseMeta struct {
 	CompletionTokens int
 	Latency          time.Duration
 	Retries          int
+
+	// Responses API output (populated when using built-in tools)
+	// Contains citations, sources, and tool call details
+	ResponsesOutput *ResponsesOutput
 }
 
 // SendWithMeta executes the request and returns response with metadata
@@ -355,12 +362,13 @@ func (b *Builder) SendWithMeta() *ResponseMeta {
 	for _, model := range models {
 		// Build provider request
 		req := &ProviderRequest{
-			Model:       string(model),
-			Messages:    msgs,
-			Temperature: b.temperature,
-			Thinking:    b.thinking,
-			Tools:       b.tools,
-			JSONMode:    b.jsonMode,
+			Model:        string(model),
+			Messages:     msgs,
+			Temperature:  b.temperature,
+			Thinking:     b.thinking,
+			Tools:        b.tools,
+			BuiltinTools: b.builtinTools,
+			JSONMode:     b.jsonMode,
 		}
 
 		// Check capability warnings
@@ -369,6 +377,19 @@ func (b *Builder) SendWithMeta() *ResponseMeta {
 		}
 		if b.thinking != "" {
 			checkCapability(client.provider, "thinking/reasoning", client.provider.Capabilities().Thinking)
+		}
+		// Check built-in tool capabilities
+		for _, bt := range b.builtinTools {
+			switch bt.Type {
+			case "web_search":
+				checkCapability(client.provider, "web_search", client.provider.Capabilities().WebSearch)
+			case "file_search":
+				checkCapability(client.provider, "file_search", client.provider.Capabilities().FileSearch)
+			case "code_interpreter":
+				checkCapability(client.provider, "code_interpreter", client.provider.Capabilities().CodeInterpreter)
+			case "mcp":
+				checkCapability(client.provider, "mcp", client.provider.Capabilities().MCP)
+			}
 		}
 
 		if Debug {
@@ -433,6 +454,7 @@ func (b *Builder) SendWithMeta() *ResponseMeta {
 				Tokens:           resp.TotalTokens,
 				PromptTokens:     resp.PromptTokens,
 				CompletionTokens: resp.CompletionTokens,
+				ResponsesOutput:  resp.ResponsesOutput,
 			}
 
 			if Pretty {
@@ -539,29 +561,31 @@ func (b *Builder) Clone() *Builder {
 		tempCopy = &v
 	}
 	newB := &Builder{
-		model:       b.model,
-		system:      b.system,
-		messages:    make([]Message, len(b.messages)),
-		vars:        make(Vars),
-		fileContext: make([]string, len(b.fileContext)),
-		debug:       b.debug,
-		maxRetries:  b.maxRetries,
-		fallbacks:   make([]Model, len(b.fallbacks)),
-		jsonMode:    b.jsonMode,
-		temperature: tempCopy,
-		thinking:    b.thinking,
-		tools:       make([]Tool, len(b.tools)),
-		images:      make([]ImageInput, len(b.images)),
-		documents:   make([]DocumentInput, len(b.documents)),
-		client:      b.client,
-		ctx:         b.ctx,
-		retryConfig: b.retryConfig,
-		validators:  make([]Validator, len(b.validators)),
+		model:        b.model,
+		system:       b.system,
+		messages:     make([]Message, len(b.messages)),
+		vars:         make(Vars),
+		fileContext:  make([]string, len(b.fileContext)),
+		debug:        b.debug,
+		maxRetries:   b.maxRetries,
+		fallbacks:    make([]Model, len(b.fallbacks)),
+		jsonMode:     b.jsonMode,
+		temperature:  tempCopy,
+		thinking:     b.thinking,
+		tools:        make([]Tool, len(b.tools)),
+		builtinTools: make([]BuiltinTool, len(b.builtinTools)),
+		images:       make([]ImageInput, len(b.images)),
+		documents:    make([]DocumentInput, len(b.documents)),
+		client:       b.client,
+		ctx:          b.ctx,
+		retryConfig:  b.retryConfig,
+		validators:   make([]Validator, len(b.validators)),
 	}
 	copy(newB.messages, b.messages)
 	copy(newB.fileContext, b.fileContext)
 	copy(newB.fallbacks, b.fallbacks)
 	copy(newB.tools, b.tools)
+	copy(newB.builtinTools, b.builtinTools)
 	copy(newB.images, b.images)
 	copy(newB.documents, b.documents)
 	copy(newB.validators, b.validators)

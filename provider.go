@@ -37,6 +37,12 @@ type ProviderCapabilities struct {
 	Embeddings bool // embedding/vector support
 	TTS        bool // text-to-speech
 	STT        bool // speech-to-text (transcription)
+
+	// OpenAI Responses API built-in tools
+	WebSearch       bool // web search tool
+	FileSearch      bool // vector store file search
+	CodeInterpreter bool // sandboxed Python execution
+	MCP             bool // remote MCP servers / connectors
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -90,13 +96,14 @@ type ProviderConfig struct {
 
 // ProviderRequest is the unified request format for all providers
 type ProviderRequest struct {
-	Model       string
-	Messages    []Message
-	Temperature *float64
-	Thinking    ThinkingLevel
-	Tools       []Tool
-	JSONMode    bool
-	Stream      bool
+	Model        string
+	Messages     []Message
+	Temperature  *float64
+	Thinking     ThinkingLevel
+	Tools        []Tool        // Function calling tools
+	BuiltinTools []BuiltinTool // Responses API built-in tools (web_search, file_search, etc.)
+	JSONMode     bool
+	Stream       bool
 }
 
 // ProviderResponse is the unified response format from all providers
@@ -107,6 +114,9 @@ type ProviderResponse struct {
 	CompletionTokens int
 	TotalTokens      int
 	FinishReason     string
+
+	// Responses API output (populated when using built-in tools)
+	ResponsesOutput *ResponsesOutput
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

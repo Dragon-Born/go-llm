@@ -84,3 +84,4 @@ func TestNewClient_AzureKeyFallsBackToOpenAI(t *testing.T) {
 		t.Fatalf("expected deployment URL to be set")
 	}
 }
+

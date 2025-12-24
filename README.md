@@ -20,6 +20,7 @@ A unified Go client for **OpenAI**, **Anthropic Claude**, **Google Gemini**, **O
 | Complex agent loops | **Built-in ReAct agents** with tools and callbacks |
 | Rate limits crash your app | **Smart retry** with exponential backoff |
 | No cost visibility | **Automatic cost tracking** per request |
+| Need web search / code execution | **Built-in tools** — web search, file search, code interpreter, MCP |
 
 ---
 
@@ -140,6 +141,89 @@ ai.GPT5().
     }).
     User("What's the weather in Paris?").
     RunTools(5) // Auto-loop until complete
+```
+
+### 🌐 Built-in Tools (OpenAI Responses API)
+
+Access powerful OpenAI-hosted tools with a simple fluent API:
+
+```go
+// Web Search - get real-time information from the internet
+resp, _ := ai.GPT5().
+    WebSearch().
+    User("What's the latest news about Go 1.24?").
+    Send()
+
+// With location & domain filtering
+meta := ai.GPT5().
+    WebSearchWith(ai.WebSearchOptions{
+        Country:        "US",
+        City:           "San Francisco",
+        AllowedDomains: []string{"golang.org", "go.dev"},
+    }).
+    User("What's new in Go?").
+    SendWithMeta()
+
+// Access citations from the response
+for _, cite := range meta.ResponsesOutput.Citations {
+    fmt.Printf("Source: %s - %s\n", cite.Title, cite.URL)
+}
+```
+
+```go
+// File Search - search your vector stores
+ai.GPT5().
+    FileSearch("vs_abc123").
+    User("What's our refund policy?").
+    Send()
+
+// With options
+ai.GPT5().
+    FileSearchWith(ai.FileSearchOptions{
+        VectorStoreIDs: []string{"vs_abc123", "vs_def456"},
+        MaxNumResults:  5,
+    }).
+    User("Find pricing documents").
+    Send()
+```
+
+```go
+// Code Interpreter - execute Python in a sandbox
+ai.GPT5().
+    CodeInterpreter().
+    User("Calculate factorial of 100 and plot fibonacci numbers").
+    Send()
+
+// With more memory for large datasets
+ai.GPT5().
+    CodeInterpreterWith(ai.CodeInterpreterOptions{
+        MemoryLimit: "4g", // 1g, 4g, 16g, or 64g
+    }).
+    User("Analyze this CSV data...").
+    Send()
+```
+
+```go
+// MCP - connect to remote MCP servers
+ai.GPT5().
+    MCP("dice", "https://dmcp-server.deno.dev/sse").
+    User("Roll 2d6+3").
+    Send()
+
+// Use built-in connectors (Dropbox, Gmail, Google Calendar, etc.)
+ai.GPT5().
+    MCPConnector("calendar", ai.ConnectorGoogleCalendar, os.Getenv("GOOGLE_TOKEN")).
+    User("What's on my calendar today?").
+    Send()
+```
+
+```go
+// Combine multiple tools
+ai.GPT5().
+    WebSearch().
+    CodeInterpreter().
+    User("Search for AAPL stock price and create a chart").
+    Send()
 ```
 
 ### 🤖 AI Agents (ReAct Pattern)
@@ -315,6 +399,10 @@ client := ai.NewClient(ai.ProviderAnthropic,
 | JSON Mode | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Extended Thinking | ✅ | ✅ | ✅ | ✅ | ❌ |
 | PDF Input | ❌ | ❌ | ✅ | ✅ | ❌ |
+| Web Search | ❌ | ✅ | ❌ | ❌ | ❌ |
+| File Search | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Code Interpreter | ❌ | ✅ | ❌ | ❌ | ❌ |
+| MCP Servers | ❌ | ✅ | ❌ | ❌ | ❌ |
 
 ⚡ = Partial support (model-dependent)
 
@@ -331,6 +419,7 @@ client := ai.NewClient(ai.ProviderAnthropic,
 | [Streaming](docs/streaming.md) | Real-time responses |
 | [Conversations](docs/conversations.md) | Multi-turn chat |
 | [Tools](docs/tools.md) | Function calling |
+| [Built-in Tools](docs/builtin-tools.md) | Web search, file search, code interpreter, MCP |
 | [Agents](docs/agents.md) | ReAct pattern agents |
 | [Parsing](docs/parsing.md) | Structured output extraction |
 | [Vision](docs/vision.md) | Image & PDF analysis |

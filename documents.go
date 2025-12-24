@@ -114,3 +114,4 @@ func (b *Builder) HasDocuments() bool {
 func (b *Builder) GetDocuments() []DocumentInput {
 	return b.documents
 }
+

@@ -53,6 +53,12 @@ func (p *OpenAIProvider) Capabilities() ProviderCapabilities {
 		Embeddings: true,
 		TTS:        true,
 		STT:        true,
+
+		// Responses API built-in tools
+		WebSearch:       true,
+		FileSearch:      true,
+		CodeInterpreter: true,
+		MCP:             true,
 	}
 }
 
@@ -66,6 +72,11 @@ func (p *OpenAIProvider) Send(ctx context.Context, req *ProviderRequest) (*Provi
 			Provider: p.Name(),
 			Message:  "OPENAI_API_KEY not set",
 		}
+	}
+
+	// Use Responses API when built-in tools are present
+	if len(req.BuiltinTools) > 0 {
+		return p.sendResponses(ctx, req)
 	}
 
 	oaiReq := p.buildRequest(req)
@@ -308,6 +319,293 @@ func (p *OpenAIProvider) parseResponse(body []byte) (*ProviderResponse, error) {
 		CompletionTokens: result.Usage.CompletionTokens,
 		TotalTokens:      result.Usage.TotalTokens,
 		FinishReason:     choice.FinishReason,
+	}, nil
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Responses API (for built-in tools: web_search, file_search, etc.)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// responsesRequest is the request format for /v1/responses
+type responsesRequest struct {
+	Model        string        `json:"model"`
+	Input        any           `json:"input"` // string or []responsesInputItem
+	Instructions string        `json:"instructions,omitempty"`
+	Tools        []any         `json:"tools,omitempty"`
+	ToolChoice   string        `json:"tool_choice,omitempty"`
+	Reasoning    *reasoningCfg `json:"reasoning,omitempty"`
+}
+
+type reasoningCfg struct {
+	Effort string `json:"effort,omitempty"` // "low", "medium", "high"
+}
+
+// responsesInputItem for multi-turn conversations
+type responsesInputItem struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+func (p *OpenAIProvider) sendResponses(ctx context.Context, req *ProviderRequest) (*ProviderResponse, error) {
+	// Build input from messages
+	var input any
+	if len(req.Messages) == 1 && req.Messages[0].Role == "user" {
+		// Simple single message - use string input
+		if content, ok := req.Messages[0].Content.(string); ok {
+			input = content
+		}
+	}
+	if input == nil {
+		// Convert messages to input items
+		var items []responsesInputItem
+		for _, msg := range req.Messages {
+			content := ""
+			if s, ok := msg.Content.(string); ok {
+				content = s
+			}
+			items = append(items, responsesInputItem{
+				Role:    msg.Role,
+				Content: content,
+			})
+		}
+		input = items
+	}
+
+	// Build tools array
+	var tools []any
+	for _, bt := range req.BuiltinTools {
+		tools = append(tools, p.buildBuiltinTool(bt))
+	}
+	// Also include function tools if any
+	for _, ft := range req.Tools {
+		tools = append(tools, ft)
+	}
+
+	// Find system message for instructions
+	var instructions string
+	for _, msg := range req.Messages {
+		if msg.Role == "system" {
+			if s, ok := msg.Content.(string); ok {
+				instructions = s
+			}
+			break
+		}
+	}
+
+	respReq := responsesRequest{
+		Model:        resolveModel(ProviderOpenAI, Model(req.Model)),
+		Input:        input,
+		Instructions: instructions,
+		Tools:        tools,
+		ToolChoice:   "auto",
+	}
+
+	// Set reasoning effort if thinking is configured
+	if req.Thinking != "" {
+		respReq.Reasoning = &reasoningCfg{Effort: string(req.Thinking)}
+	}
+
+	body, err := json.Marshal(respReq)
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "failed to marshal responses request", Err: err}
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", p.config.BaseURL+"/responses", bytes.NewReader(body))
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "failed to create request", Err: err}
+	}
+
+	p.setHeaders(httpReq)
+
+	if Debug {
+		fmt.Printf("%s [%s] POST %s\n", colorDim("→"), p.Name(), "/responses")
+	}
+
+	resp, err := p.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "request failed", Err: err}
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "failed to read response", Err: err}
+	}
+
+	return p.parseResponsesResponse(respBody)
+}
+
+// buildBuiltinTool converts BuiltinTool to the API format
+func (p *OpenAIProvider) buildBuiltinTool(bt BuiltinTool) map[string]any {
+	tool := map[string]any{
+		"type": bt.Type,
+	}
+
+	switch bt.Type {
+	case "web_search":
+		if bt.UserLocation != nil {
+			tool["user_location"] = bt.UserLocation
+		}
+		if bt.SearchFilter != nil {
+			tool["filters"] = bt.SearchFilter
+		}
+
+	case "file_search":
+		if len(bt.VectorStoreIDs) > 0 {
+			tool["vector_store_ids"] = bt.VectorStoreIDs
+		}
+		if bt.MaxNumResults > 0 {
+			tool["max_num_results"] = bt.MaxNumResults
+		}
+		if bt.FileFilter != nil {
+			tool["filters"] = bt.FileFilter
+		}
+
+	case "code_interpreter":
+		if bt.Container != nil {
+			tool["container"] = bt.Container
+		}
+
+	case "mcp":
+		if bt.ServerLabel != "" {
+			tool["server_label"] = bt.ServerLabel
+		}
+		if bt.ServerURL != "" {
+			tool["server_url"] = bt.ServerURL
+		}
+		if bt.ServerDescription != "" {
+			tool["server_description"] = bt.ServerDescription
+		}
+		if bt.ConnectorID != "" {
+			tool["connector_id"] = bt.ConnectorID
+		}
+		if bt.Authorization != "" {
+			tool["authorization"] = bt.Authorization
+		}
+		if bt.RequireApproval != nil {
+			tool["require_approval"] = bt.RequireApproval
+		}
+		if len(bt.AllowedTools) > 0 {
+			tool["allowed_tools"] = bt.AllowedTools
+		}
+	}
+
+	return tool
+}
+
+// parseResponsesResponse parses the Responses API output
+func (p *OpenAIProvider) parseResponsesResponse(body []byte) (*ProviderResponse, error) {
+	var result struct {
+		ID     string `json:"id"`
+		Status string `json:"status"`
+		Output []struct {
+			ID      string `json:"id"`
+			Type    string `json:"type"`
+			Status  string `json:"status,omitempty"`
+			Role    string `json:"role,omitempty"`
+			Content []struct {
+				Type        string `json:"type"`
+				Text        string `json:"text,omitempty"`
+				Annotations []struct {
+					Type       string `json:"type"`
+					URL        string `json:"url,omitempty"`
+					Title      string `json:"title,omitempty"`
+					FileID     string `json:"file_id,omitempty"`
+					Filename   string `json:"filename,omitempty"`
+					StartIndex int    `json:"start_index,omitempty"`
+					EndIndex   int    `json:"end_index,omitempty"`
+				} `json:"annotations,omitempty"`
+			} `json:"content,omitempty"`
+			// Tool call fields
+			ServerLabel string `json:"server_label,omitempty"`
+			Name        string `json:"name,omitempty"`
+			Arguments   string `json:"arguments,omitempty"`
+			OutputText  string `json:"output,omitempty"`
+			Error       string `json:"error,omitempty"`
+		} `json:"output"`
+		OutputText string `json:"output_text,omitempty"` // Convenience field
+		Usage      struct {
+			InputTokens  int `json:"input_tokens"`
+			OutputTokens int `json:"output_tokens"`
+			TotalTokens  int `json:"total_tokens"`
+		} `json:"usage"`
+		Error *struct {
+			Message string `json:"message"`
+			Type    string `json:"type"`
+			Code    string `json:"code"`
+		} `json:"error,omitempty"`
+	}
+
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, &ProviderError{
+			Provider: p.Name(),
+			Message:  fmt.Sprintf("parse error: %v\nBody: %s", err, string(body)),
+		}
+	}
+
+	if result.Error != nil {
+		return nil, &ProviderError{
+			Provider: p.Name(),
+			Code:     result.Error.Code,
+			Message:  result.Error.Message,
+		}
+	}
+
+	// Extract text content and build ResponsesOutput
+	var textContent string
+	var citations []Citation
+	var toolCalls []ResponsesToolCall
+
+	for _, item := range result.Output {
+		switch item.Type {
+		case "message":
+			for _, c := range item.Content {
+				if c.Type == "output_text" || c.Type == "text" {
+					textContent += c.Text
+					// Extract citations
+					for _, ann := range c.Annotations {
+						citations = append(citations, Citation{
+							Type:       ann.Type,
+							URL:        ann.URL,
+							Title:      ann.Title,
+							FileID:     ann.FileID,
+							Filename:   ann.Filename,
+							StartIndex: ann.StartIndex,
+							EndIndex:   ann.EndIndex,
+						})
+					}
+				}
+			}
+
+		case "web_search_call", "file_search_call", "mcp_call", "code_interpreter_call":
+			toolCalls = append(toolCalls, ResponsesToolCall{
+				ID:          item.ID,
+				Type:        item.Type,
+				Status:      item.Status,
+				ServerLabel: item.ServerLabel,
+				Name:        item.Name,
+				Arguments:   item.Arguments,
+				Output:      item.OutputText,
+				Error:       item.Error,
+			})
+		}
+	}
+
+	// Use output_text convenience field if available
+	if textContent == "" && result.OutputText != "" {
+		textContent = result.OutputText
+	}
+
+	return &ProviderResponse{
+		Content:          textContent,
+		PromptTokens:     result.Usage.InputTokens,
+		CompletionTokens: result.Usage.OutputTokens,
+		TotalTokens:      result.Usage.TotalTokens,
+		ResponsesOutput: &ResponsesOutput{
+			Text:      textContent,
+			Citations: citations,
+			ToolCalls: toolCalls,
+		},
 	}, nil
 }
 

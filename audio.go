@@ -15,8 +15,8 @@ type TTSModel string
 
 const (
 	// OpenAI TTS Models
-	TTSTTS1    TTSModel = "tts-1"      // Standard quality, faster
-	TTSTTS1HD  TTSModel = "tts-1-hd"   // High definition, slower
+	TTSTTS1       TTSModel = "tts-1"           // Standard quality, faster
+	TTSTTS1HD     TTSModel = "tts-1-hd"        // High definition, slower
 	TTSGpt4oAudio TTSModel = "gpt-4o-mini-tts" // GPT-4o audio
 
 	// Google TTS (via Gemini)
@@ -67,9 +67,9 @@ const (
 
 // Default audio settings
 var (
-	DefaultTTSModel  = TTSTTS1
-	DefaultSTTModel  = STTWhisper1
-	DefaultVoice     = VoiceAlloy
+	DefaultTTSModel    = TTSTTS1
+	DefaultSTTModel    = STTWhisper1
+	DefaultVoice       = VoiceAlloy
 	DefaultAudioFormat = AudioFormatMP3
 )
 
@@ -80,10 +80,10 @@ var (
 // TTSRequest is the request for text-to-speech
 type TTSRequest struct {
 	Model  string
-	Input  string      // text to speak
-	Voice  string      // voice ID
-	Format string      // output format
-	Speed  float64     // 0.25 to 4.0 (1.0 is default)
+	Input  string  // text to speak
+	Voice  string  // voice ID
+	Format string  // output format
+	Speed  float64 // 0.25 to 4.0 (1.0 is default)
 }
 
 // TTSResponse is the response from text-to-speech
@@ -106,7 +106,7 @@ type STTRequest struct {
 	Language    string // optional: language hint (ISO 639-1)
 	Prompt      string // optional: context/prompt to guide transcription
 	Temperature float64
-	Timestamps  bool   // include word-level timestamps
+	Timestamps  bool // include word-level timestamps
 }
 
 // STTResponse is the response from speech-to-text
@@ -444,4 +444,3 @@ func (c *Client) Transcribe(path string) *STTBuilder {
 func (c *Client) TranscribeBytes(audio []byte, filename string) *STTBuilder {
 	return TranscribeBytes(audio, filename).WithClient(c)
 }
-

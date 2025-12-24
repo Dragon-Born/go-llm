@@ -73,3 +73,4 @@ func TestBuilder_StrictJSON_ValidatesJSONEvenWithFences(t *testing.T) {
 		t.Fatalf("unexpected content: %q", meta.Content)
 	}
 }
+
