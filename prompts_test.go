@@ -251,6 +251,3 @@ func TestListPromptsNotFound(t *testing.T) {
 		t.Error("expected error for non-existent directory")
 	}
 }
-
-
-

@@ -45,4 +45,3 @@ func TestCompare_On_ReturnsResultsWithoutNetwork(t *testing.T) {
 		}
 	}
 }
-

@@ -180,4 +180,3 @@ func TestToolArguments_JSONUnmarshalErrorsAreHandled(t *testing.T) {
 		// acceptable, but the error is wrapped; just ensure it exists
 	}
 }
-

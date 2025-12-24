@@ -2,7 +2,6 @@ package ai
 
 import (
 	gocontext "context"
-	"fmt"
 	"time"
 )
 
@@ -50,17 +49,4 @@ func (b *Builder) getContext() gocontext.Context {
 		return b.ctx
 	}
 	return gocontext.Background()
-}
-
-// checkContext returns an error if context is cancelled
-func (b *Builder) checkContext() error {
-	if b.ctx == nil {
-		return nil
-	}
-	select {
-	case <-b.ctx.Done():
-		return fmt.Errorf("request cancelled: %w", b.ctx.Err())
-	default:
-		return nil
-	}
 }

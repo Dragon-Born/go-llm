@@ -4,7 +4,6 @@ import (
 	"context"
 	"sync"
 	"testing"
-	"time"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -190,19 +189,3 @@ func noSleepRetryConfig(maxRetries int) *RetryConfig {
 	cfg.Jitter = 0
 	return cfg
 }
-
-// Tiny helper for timeouts without flakiness.
-func mustWithin(t *testing.T, d time.Duration, fn func()) {
-	t.Helper()
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		fn()
-	}()
-	select {
-	case <-done:
-	case <-time.After(d):
-		t.Fatalf("timed out after %v", d)
-	}
-}
-

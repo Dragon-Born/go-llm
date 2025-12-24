@@ -156,25 +156,6 @@ func shouldRetry(config *RetryConfig, err error) bool {
 	return false
 }
 
-// parseRetryAfter parses Retry-After header value
-func parseRetryAfter(header string) time.Duration {
-	if header == "" {
-		return 0
-	}
-
-	// Try parsing as seconds
-	if seconds, err := strconv.Atoi(header); err == nil {
-		return time.Duration(seconds) * time.Second
-	}
-
-	// Try parsing as HTTP-date (simplified)
-	if t, err := time.Parse(time.RFC1123, header); err == nil {
-		return time.Until(t)
-	}
-
-	return 0
-}
-
 // ═══════════════════════════════════════════════════════════════════════════
 // Retry Executor
 // ═══════════════════════════════════════════════════════════════════════════

@@ -175,6 +175,3 @@ func TestConversationBuildMessagesNoSystem(t *testing.T) {
 		t.Error("should only have user message")
 	}
 }
-
-
-

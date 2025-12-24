@@ -51,4 +51,3 @@ func TestResolveModel_OpenRouter_ClaudeDefaults(t *testing.T) {
 		t.Fatalf("expected %q, got %q", "anthropic/claude-haiku-4.5", got)
 	}
 }
-

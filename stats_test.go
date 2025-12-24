@@ -140,6 +140,9 @@ func TestGetStatsIsolation(t *testing.T) {
 
 	stats1 := GetStats()
 	stats1.Requests = 999 // Modify returned copy
+	if stats1.Requests != 999 {
+		t.Fatal("expected local copy to be mutable")
+	}
 
 	stats2 := GetStats()
 
@@ -147,7 +150,3 @@ func TestGetStatsIsolation(t *testing.T) {
 		t.Error("GetStats should return a copy, not the original")
 	}
 }
-
-
-
-

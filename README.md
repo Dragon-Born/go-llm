@@ -410,26 +410,32 @@ client := ai.NewClient(ai.ProviderAnthropic,
 
 ## Documentation
 
+Full docs are hosted on the GitHub Wiki: [go-llm Wiki](https://github.com/Dragon-Born/go-llm/wiki/).
+
 | Topic | Description |
 |-------|-------------|
-| [Quick Start](docs/quick-start.md) | Get up and running in 5 minutes |
-| [Providers](docs/providers.md) | Multi-provider setup & switching |
-| [Models](docs/models.md) | All supported models |
-| [Builder API](docs/builder.md) | Fluent API reference |
-| [Streaming](docs/streaming.md) | Real-time responses |
-| [Conversations](docs/conversations.md) | Multi-turn chat |
-| [Tools](docs/tools.md) | Function calling |
-| [Built-in Tools](docs/builtin-tools.md) | Web search, file search, code interpreter, MCP |
-| [Agents](docs/agents.md) | ReAct pattern agents |
-| [Parsing](docs/parsing.md) | Structured output extraction |
-| [Vision](docs/vision.md) | Image & PDF analysis |
-| [Embeddings](docs/embeddings.md) | Vector embeddings & search |
-| [Audio](docs/audio.md) | TTS & transcription |
-| [Batch](docs/batch.md) | Parallel processing |
-| [Retry](docs/retry.md) | Smart retry strategies |
-| [Validation](docs/validation.md) | Response guardrails |
-| [Cost](docs/cost.md) | Cost tracking & budgets |
-| [Configuration](docs/configuration.md) | Global settings |
+| [Home](https://github.com/Dragon-Born/go-llm/wiki/) | Documentation index |
+| [Quick Start](https://github.com/Dragon-Born/go-llm/wiki/Quick-Start) | Get up and running in 5 minutes |
+| [Multi-Provider Support](https://github.com/Dragon-Born/go-llm/wiki/Multi%E2%80%90Provider-Support) | Multi-provider setup & switching |
+| [Models Reference](https://github.com/Dragon-Born/go-llm/wiki/Models-Reference) | All supported models |
+| [Builder API](https://github.com/Dragon-Born/go-llm/wiki/Builder) | Fluent API reference |
+| [Streaming](https://github.com/Dragon-Born/go-llm/wiki/Streaming) | Real-time responses |
+| [Conversations](https://github.com/Dragon-Born/go-llm/wiki/Conversations) | Multi-turn chat |
+| [Tool/Function Calling](https://github.com/Dragon-Born/go-llm/wiki/Tool-Function-Calling) | Function calling |
+| [Built-in Tools](https://github.com/Dragon-Born/go-llm/wiki/Builtin-Tools) | Web search, file search, code interpreter, MCP |
+| [Agents](https://github.com/Dragon-Born/go-llm/wiki/Agents) | ReAct pattern agents |
+| [Structured Output](https://github.com/Dragon-Born/go-llm/wiki/Structured-Output) | Structured output extraction |
+| [Structured Output (Parse Retries)](https://github.com/Dragon-Born/go-llm/wiki/Structured-Output-with-Parse-Retries) | Structured parsing with retries |
+| [Vision / Image Input (and PDFs)](https://github.com/Dragon-Born/go-llm/wiki/Vision---Image-Input) | Image input + PDF/document input |
+| [Embeddings](https://github.com/Dragon-Born/go-llm/wiki/Embeddings) | Vector embeddings & search |
+| [Audio](https://github.com/Dragon-Born/go-llm/wiki/Audio) | TTS & transcription |
+| [Batch](https://github.com/Dragon-Born/go-llm/wiki/Batch) | Parallel processing |
+| [Cost Tracking](https://github.com/Dragon-Born/go-llm/wiki/Cost-Tracking) | Cost tracking & budgets |
+| [Configuration](https://github.com/Dragon-Born/go-llm/wiki/Configuration) | Global settings |
+| [Smart Retry](https://github.com/Dragon-Born/go-llm/wiki/Smart-Retry-with-Exponential-Backoff) | Smart retry strategies |
+| [Response Validation](https://github.com/Dragon-Born/go-llm/wiki/Response-Validation-%26-Guardrails) | Response guardrails |
+| [Hooks & Observability](https://github.com/Dragon-Born/go-llm/wiki/Hooks-and-Observability) | Request/response hooks, tokens, errors |
+| [Advanced](https://github.com/Dragon-Born/go-llm/wiki/Advanced) | Advanced features & patterns |
 
 ---
 

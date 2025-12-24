@@ -6,7 +6,7 @@
 # Folders
 _obj
 _test
-docs/
+go-llm.wiki/
 
 # Architecture specific extensions/prefixes
 *.[568vq]

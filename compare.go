@@ -7,9 +7,9 @@ import (
 
 // CompareBuilder helps compare responses across multiple models
 type CompareBuilder struct {
-	system  string
-	prompt  string
-	vars    Vars
+	system string
+	prompt string
+	vars   Vars
 }
 
 // Compare starts a comparison builder
@@ -100,7 +100,7 @@ func (c *CompareBuilder) On(models ...Model) []CompareResult {
 		fmt.Println()
 		fmt.Printf("%s %s\n", colorYellow("▸"), colorCyan(string(r.Model)))
 		fmt.Println(colorDim("─────────────────────────────────────────────────────────────"))
-		
+
 		if r.Error != nil {
 			fmt.Printf("%s %v\n", colorRed("✗"), r.Error)
 		} else {
@@ -133,7 +133,3 @@ func (c *CompareBuilder) TopModels() []CompareResult {
 func (c *CompareBuilder) FastModels() []CompareResult {
 	return c.On(ModelGPT4oMini, ModelClaudeHaiku, ModelGemini2Flash, ModelGrok3Mini)
 }
-
-
-
-

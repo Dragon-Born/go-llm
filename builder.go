@@ -416,8 +416,13 @@ func (b *Builder) SendWithMeta() *ResponseMeta {
 				if retries > 1 {
 					totalRetries++
 				}
+				invokeBeforeRequest(model, msgs)
 				waitForRateLimit()
-				return client.provider.Send(ctx, req)
+				r, e := client.provider.Send(ctx, req)
+				if e != nil {
+					invokeOnError(model, e)
+				}
+				return r, e
 			})
 		} else if b.maxRetries > 0 {
 			// Legacy retry (simple)
@@ -426,16 +431,22 @@ func (b *Builder) SendWithMeta() *ResponseMeta {
 					totalRetries++
 					time.Sleep(time.Duration(attempt*attempt) * 100 * time.Millisecond)
 				}
+				invokeBeforeRequest(model, msgs)
 				waitForRateLimit()
 				resp, err = client.provider.Send(ctx, req)
 				if err == nil {
 					break
 				}
+				invokeOnError(model, err)
 			}
 		} else {
 			// No retry
+			invokeBeforeRequest(model, msgs)
 			waitForRateLimit()
 			resp, err = client.provider.Send(ctx, req)
+			if err != nil {
+				invokeOnError(model, err)
+			}
 		}
 
 		if err == nil {
@@ -444,6 +455,7 @@ func (b *Builder) SendWithMeta() *ResponseMeta {
 			if len(b.validators) > 0 {
 				validated, validationErr := b.runValidators(content)
 				if validationErr != nil {
+					invokeOnError(model, validationErr)
 					return &ResponseMeta{
 						Error:   validationErr,
 						Model:   model,
@@ -471,6 +483,8 @@ func (b *Builder) SendWithMeta() *ResponseMeta {
 
 			// Track stats
 			trackRequest(meta)
+			invokeOnTokens(model, meta.PromptTokens, meta.CompletionTokens)
+			invokeAfterResponse(model, meta.Content, meta.Latency)
 
 			return meta
 		}

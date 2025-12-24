@@ -52,7 +52,6 @@ func TestCompareResultStruct(t *testing.T) {
 	result := CompareResult{
 		Model:    ModelGPT5,
 		Response: "Test response",
-		Error:    nil,
 		Tokens:   100,
 	}
 
@@ -66,7 +65,3 @@ func TestCompareResultStruct(t *testing.T) {
 		t.Error("tokens mismatch")
 	}
 }
-
-
-
-

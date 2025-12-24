@@ -335,11 +335,11 @@ func PrintCostSummary() {
 func EstimatePromptCost(model Model, promptChars int) float64 {
 	// Rough token estimate: 1 token ≈ 4 characters
 	estimatedTokens := promptChars / 4
-	pricing, ok := ModelPricingMap[model]
-	if !ok {
-		pricing = ModelPricing{2.50, 10.00}
+	inputPerMillion := 2.50
+	if pricing, ok := ModelPricingMap[model]; ok {
+		inputPerMillion = pricing.InputPerMillion
 	}
-	return float64(estimatedTokens) / 1_000_000 * pricing.InputPerMillion
+	return float64(estimatedTokens) / 1_000_000 * inputPerMillion
 }
 
 // CheapestModel returns the cheapest model from a list for a given task

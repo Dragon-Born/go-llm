@@ -8,7 +8,6 @@ import (
 // ANSI color codes
 const (
 	reset   = "\033[0m"
-	bold    = "\033[1m"
 	dim     = "\033[2m"
 	red     = "\033[31m"
 	green   = "\033[32m"
@@ -16,7 +15,6 @@ const (
 	blue    = "\033[34m"
 	magenta = "\033[35m"
 	cyan    = "\033[36m"
-	white   = "\033[37m"
 )
 
 func colorRed(s string) string     { return red + s + reset }
@@ -26,7 +24,6 @@ func colorBlue(s string) string    { return blue + s + reset }
 func colorMagenta(s string) string { return magenta + s + reset }
 func colorCyan(s string) string    { return cyan + s + reset }
 func colorDim(s string) string     { return dim + s + reset }
-func colorBold(s string) string    { return bold + s + reset }
 
 // printDebugRequest prints the outgoing request
 func printDebugRequest(model Model, messages []Message) {
@@ -34,17 +31,20 @@ func printDebugRequest(model Model, messages []Message) {
 	fmt.Println(colorYellow("┌─────────────────────────────────────────────────────────────"))
 	fmt.Printf("%s DEBUG REQUEST → %s\n", colorYellow("│"), colorCyan(string(model)))
 	fmt.Println(colorYellow("├─────────────────────────────────────────────────────────────"))
-	
+
 	for _, m := range messages {
-		role := colorDim(m.Role)
-		if m.Role == "system" {
+		var role string
+		switch m.Role {
+		case "system":
 			role = colorMagenta(m.Role)
-		} else if m.Role == "user" {
+		case "user":
 			role = colorGreen(m.Role)
+		default:
+			role = colorDim(m.Role)
 		}
-		
+
 		fmt.Printf("%s [%s]\n", colorYellow("│"), role)
-		
+
 		// Indent content
 		var contentStr string
 		if str, ok := m.Content.(string); ok {
@@ -59,7 +59,7 @@ func printDebugRequest(model Model, messages []Message) {
 			}
 		}
 	}
-	
+
 	fmt.Println(colorYellow("└─────────────────────────────────────────────────────────────"))
 }
 
@@ -69,12 +69,12 @@ func printDebugResponse(content string, resp *Response) {
 	fmt.Println(colorGreen("┌─────────────────────────────────────────────────────────────"))
 	fmt.Printf("%s DEBUG RESPONSE\n", colorGreen("│"))
 	fmt.Println(colorGreen("├─────────────────────────────────────────────────────────────"))
-	
+
 	lines := strings.Split(content, "\n")
 	for _, line := range lines {
 		fmt.Printf("%s %s\n", colorGreen("│"), line)
 	}
-	
+
 	fmt.Println(colorGreen("├─────────────────────────────────────────────────────────────"))
 	fmt.Printf("%s Tokens: prompt=%d, completion=%d, total=%d\n",
 		colorGreen("│"),
@@ -103,7 +103,3 @@ func printPrettyConversation(model Model, userMsg, assistantMsg string) {
 	fmt.Println(assistantMsg)
 	fmt.Println()
 }
-
-
-
-
