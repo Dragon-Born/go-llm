@@ -1,0 +1,565 @@
+package ai
+
+import (
+	"bufio"
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"strings"
+)
+
+// ═══════════════════════════════════════════════════════════════════════════
+// OpenAI Provider
+// ═══════════════════════════════════════════════════════════════════════════
+
+const openAIBaseURL = "https://api.openai.com/v1"
+
+// OpenAIProvider implements Provider for OpenAI
+type OpenAIProvider struct {
+	config     ProviderConfig
+	httpClient *http.Client
+}
+
+// NewOpenAIProvider creates an OpenAI provider
+func NewOpenAIProvider(config ProviderConfig) *OpenAIProvider {
+	if config.BaseURL == "" {
+		config.BaseURL = openAIBaseURL
+	}
+	if config.APIKey == "" {
+		config.APIKey = os.Getenv("OPENAI_API_KEY")
+	}
+	client := http.DefaultClient
+	if config.Timeout > 0 {
+		client = &http.Client{Timeout: config.Timeout}
+	}
+	return &OpenAIProvider{config: config, httpClient: client}
+}
+
+func (p *OpenAIProvider) Name() string {
+	return "openai"
+}
+
+func (p *OpenAIProvider) Capabilities() ProviderCapabilities {
+	return ProviderCapabilities{
+		Tools:      true,
+		Vision:     true,
+		Streaming:  true,
+		JSON:       true,
+		Thinking:   true, // o1 models support reasoning
+		Embeddings: true,
+		TTS:        true,
+		STT:        true,
+	}
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Send
+// ═══════════════════════════════════════════════════════════════════════════
+
+func (p *OpenAIProvider) Send(ctx context.Context, req *ProviderRequest) (*ProviderResponse, error) {
+	if p.config.APIKey == "" {
+		return nil, &ProviderError{
+			Provider: p.Name(),
+			Message:  "OPENAI_API_KEY not set",
+		}
+	}
+
+	oaiReq := p.buildRequest(req)
+
+	body, err := json.Marshal(oaiReq)
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "failed to marshal request", Err: err}
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", p.config.BaseURL+"/chat/completions", bytes.NewReader(body))
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "failed to create request", Err: err}
+	}
+
+	p.setHeaders(httpReq)
+
+	if Debug {
+		fmt.Printf("%s [%s] POST %s\n", colorDim("→"), p.Name(), "/chat/completions")
+	}
+
+	resp, err := p.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "request failed", Err: err}
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "failed to read response", Err: err}
+	}
+
+	return p.parseResponse(respBody)
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SendStream
+// ═══════════════════════════════════════════════════════════════════════════
+
+func (p *OpenAIProvider) SendStream(ctx context.Context, req *ProviderRequest, callback StreamCallback) (*ProviderResponse, error) {
+	if p.config.APIKey == "" {
+		return nil, &ProviderError{
+			Provider: p.Name(),
+			Message:  "OPENAI_API_KEY not set",
+		}
+	}
+
+	oaiReq := p.buildRequest(req)
+	oaiReq.Stream = true
+
+	body, err := json.Marshal(oaiReq)
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "failed to marshal request", Err: err}
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", p.config.BaseURL+"/chat/completions", bytes.NewReader(body))
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "failed to create request", Err: err}
+	}
+
+	p.setHeaders(httpReq)
+
+	if Debug {
+		fmt.Printf("%s [%s] POST %s (stream)\n", colorDim("→"), p.Name(), "/chat/completions")
+	}
+
+	resp, err := p.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "request failed", Err: err}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, &ProviderError{
+			Provider: p.Name(),
+			Code:     fmt.Sprintf("%d", resp.StatusCode),
+			Message:  string(body),
+		}
+	}
+
+	var fullContent strings.Builder
+	reader := bufio.NewReader(resp.Body)
+
+	for {
+		line, err := reader.ReadBytes('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, &ProviderError{Provider: p.Name(), Message: "stream read error", Err: err}
+		}
+
+		line = bytes.TrimSpace(line)
+		if !bytes.HasPrefix(line, []byte("data: ")) {
+			continue
+		}
+
+		data := bytes.TrimPrefix(line, []byte("data: "))
+		if string(data) == "[DONE]" {
+			break
+		}
+
+		var chunk struct {
+			Choices []struct {
+				Delta struct {
+					Content string `json:"content"`
+				} `json:"delta"`
+			} `json:"choices"`
+		}
+
+		if err := json.Unmarshal(data, &chunk); err != nil {
+			continue
+		}
+
+		if len(chunk.Choices) > 0 {
+			content := chunk.Choices[0].Delta.Content
+			fullContent.WriteString(content)
+			callback(content)
+		}
+	}
+
+	completionTokens := len(fullContent.String()) / 4
+
+	return &ProviderResponse{
+		Content:          fullContent.String(),
+		CompletionTokens: completionTokens,
+		TotalTokens:      completionTokens,
+	}, nil
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Internal helpers
+// ═══════════════════════════════════════════════════════════════════════════
+
+type openAIRequest struct {
+	Model          string          `json:"model"`
+	Messages       []Message       `json:"messages"`
+	Stream         bool            `json:"stream,omitempty"`
+	Temperature    *float64        `json:"temperature,omitempty"`
+	Tools          []Tool          `json:"tools,omitempty"`
+	ToolChoice     any             `json:"tool_choice,omitempty"`
+	ResponseFormat *ResponseFormat `json:"response_format,omitempty"`
+	// OpenAI uses "reasoning_effort" for o1 models
+	ReasoningEffort string `json:"reasoning_effort,omitempty"`
+}
+
+func (p *OpenAIProvider) buildRequest(req *ProviderRequest) *openAIRequest {
+	oaiReq := &openAIRequest{
+		Model:    resolveModel(ProviderOpenAI, Model(req.Model)),
+		Messages: req.Messages,
+	}
+
+	if req.Temperature != nil {
+		oaiReq.Temperature = req.Temperature
+	}
+
+	// OpenAI o1 models use reasoning_effort: low, medium, high
+	if req.Thinking != "" {
+		switch req.Thinking {
+		case ThinkingLow:
+			oaiReq.ReasoningEffort = "low"
+		case ThinkingMedium:
+			oaiReq.ReasoningEffort = "medium"
+		case ThinkingHigh:
+			oaiReq.ReasoningEffort = "high"
+		}
+	}
+
+	if len(req.Tools) > 0 {
+		oaiReq.Tools = req.Tools
+		oaiReq.ToolChoice = "auto"
+	}
+
+	if req.JSONMode {
+		oaiReq.ResponseFormat = &ResponseFormat{Type: "json_object"}
+	}
+
+	return oaiReq
+}
+
+func (p *OpenAIProvider) setHeaders(req *http.Request) {
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+p.config.APIKey)
+
+	for k, v := range p.config.Headers {
+		req.Header.Set(k, v)
+	}
+}
+
+func (p *OpenAIProvider) parseResponse(body []byte) (*ProviderResponse, error) {
+	var result struct {
+		ID      string `json:"id"`
+		Choices []struct {
+			Message struct {
+				Role      string     `json:"role"`
+				Content   string     `json:"content"`
+				ToolCalls []ToolCall `json:"tool_calls,omitempty"`
+			} `json:"message"`
+			FinishReason string `json:"finish_reason"`
+		} `json:"choices"`
+		Usage struct {
+			PromptTokens     int `json:"prompt_tokens"`
+			CompletionTokens int `json:"completion_tokens"`
+			TotalTokens      int `json:"total_tokens"`
+		} `json:"usage"`
+		Error *struct {
+			Message string `json:"message"`
+			Type    string `json:"type"`
+			Code    string `json:"code"`
+		} `json:"error,omitempty"`
+	}
+
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, &ProviderError{
+			Provider: p.Name(),
+			Message:  fmt.Sprintf("parse error: %v\nBody: %s", err, string(body)),
+		}
+	}
+
+	if result.Error != nil {
+		return nil, &ProviderError{
+			Provider: p.Name(),
+			Code:     result.Error.Code,
+			Message:  result.Error.Message,
+		}
+	}
+
+	if len(result.Choices) == 0 {
+		return nil, &ProviderError{
+			Provider: p.Name(),
+			Message:  "no response choices",
+		}
+	}
+
+	choice := result.Choices[0]
+	return &ProviderResponse{
+		Content:          choice.Message.Content,
+		ToolCalls:        choice.Message.ToolCalls,
+		PromptTokens:     result.Usage.PromptTokens,
+		CompletionTokens: result.Usage.CompletionTokens,
+		TotalTokens:      result.Usage.TotalTokens,
+		FinishReason:     choice.FinishReason,
+	}, nil
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Embeddings
+// ═══════════════════════════════════════════════════════════════════════════
+
+func (p *OpenAIProvider) Embed(ctx context.Context, req *EmbeddingRequest) (*EmbeddingResponse, error) {
+	if p.config.APIKey == "" {
+		return nil, &ProviderError{Provider: p.Name(), Message: "OPENAI_API_KEY not set"}
+	}
+
+	oaiReq := struct {
+		Model      string   `json:"model"`
+		Input      []string `json:"input"`
+		Dimensions int      `json:"dimensions,omitempty"`
+	}{
+		Model: req.Model,
+		Input: req.Input,
+	}
+	if req.Dimensions > 0 {
+		oaiReq.Dimensions = req.Dimensions
+	}
+
+	body, err := json.Marshal(oaiReq)
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "failed to marshal request", Err: err}
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", p.config.BaseURL+"/embeddings", bytes.NewReader(body))
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "failed to create request", Err: err}
+	}
+
+	p.setHeaders(httpReq)
+
+	resp, err := p.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "request failed", Err: err}
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "failed to read response", Err: err}
+	}
+
+	var result struct {
+		Data []struct {
+			Embedding []float64 `json:"embedding"`
+			Index     int       `json:"index"`
+		} `json:"data"`
+		Model string `json:"model"`
+		Usage struct {
+			PromptTokens int `json:"prompt_tokens"`
+			TotalTokens  int `json:"total_tokens"`
+		} `json:"usage"`
+		Error *struct {
+			Message string `json:"message"`
+			Code    string `json:"code"`
+		} `json:"error,omitempty"`
+	}
+
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "parse error", Err: err}
+	}
+
+	if result.Error != nil {
+		return nil, &ProviderError{Provider: p.Name(), Code: result.Error.Code, Message: result.Error.Message}
+	}
+
+	embeddings := make([][]float64, len(result.Data))
+	var dims int
+	for _, d := range result.Data {
+		embeddings[d.Index] = d.Embedding
+		if dims == 0 {
+			dims = len(d.Embedding)
+		}
+	}
+
+	return &EmbeddingResponse{
+		Embeddings:  embeddings,
+		Model:       result.Model,
+		TotalTokens: result.Usage.TotalTokens,
+		Dimensions:  dims,
+	}, nil
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Text-to-Speech
+// ═══════════════════════════════════════════════════════════════════════════
+
+func (p *OpenAIProvider) TextToSpeech(ctx context.Context, req *TTSRequest) (*TTSResponse, error) {
+	if p.config.APIKey == "" {
+		return nil, &ProviderError{Provider: p.Name(), Message: "OPENAI_API_KEY not set"}
+	}
+
+	oaiReq := struct {
+		Model          string  `json:"model"`
+		Input          string  `json:"input"`
+		Voice          string  `json:"voice"`
+		ResponseFormat string  `json:"response_format,omitempty"`
+		Speed          float64 `json:"speed,omitempty"`
+	}{
+		Model:          req.Model,
+		Input:          req.Input,
+		Voice:          req.Voice,
+		ResponseFormat: req.Format,
+		Speed:          req.Speed,
+	}
+
+	body, err := json.Marshal(oaiReq)
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "failed to marshal request", Err: err}
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", p.config.BaseURL+"/audio/speech", bytes.NewReader(body))
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "failed to create request", Err: err}
+	}
+
+	p.setHeaders(httpReq)
+
+	resp, err := p.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "request failed", Err: err}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		errBody, _ := io.ReadAll(resp.Body)
+		return nil, &ProviderError{
+			Provider: p.Name(),
+			Code:     fmt.Sprintf("%d", resp.StatusCode),
+			Message:  string(errBody),
+		}
+	}
+
+	audio, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "failed to read audio", Err: err}
+	}
+
+	return &TTSResponse{
+		Audio:       audio,
+		Format:      req.Format,
+		ContentType: resp.Header.Get("Content-Type"),
+	}, nil
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Speech-to-Text
+// ═══════════════════════════════════════════════════════════════════════════
+
+func (p *OpenAIProvider) SpeechToText(ctx context.Context, req *STTRequest) (*STTResponse, error) {
+	if p.config.APIKey == "" {
+		return nil, &ProviderError{Provider: p.Name(), Message: "OPENAI_API_KEY not set"}
+	}
+
+	// Create multipart form
+	var buf bytes.Buffer
+	writer := newMultipartWriter(&buf)
+
+	// Add file
+	filename := req.Filename
+	if filename == "" {
+		filename = "audio.mp3"
+	}
+	fw, err := writer.CreateFormFile("file", filename)
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "failed to create form file", Err: err}
+	}
+	if _, err := fw.Write(req.Audio); err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "failed to write audio", Err: err}
+	}
+
+	// Add model
+	if err := writer.WriteField("model", req.Model); err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "failed to write model", Err: err}
+	}
+
+	// Optional fields
+	if req.Language != "" {
+		writer.WriteField("language", req.Language)
+	}
+	if req.Prompt != "" {
+		writer.WriteField("prompt", req.Prompt)
+	}
+	if req.Timestamps {
+		writer.WriteField("timestamp_granularities[]", "word")
+		writer.WriteField("response_format", "verbose_json")
+	}
+
+	writer.Close()
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", p.config.BaseURL+"/audio/transcriptions", &buf)
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "failed to create request", Err: err}
+	}
+
+	httpReq.Header.Set("Authorization", "Bearer "+p.config.APIKey)
+	httpReq.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp, err := p.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "request failed", Err: err}
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, &ProviderError{Provider: p.Name(), Message: "failed to read response", Err: err}
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, &ProviderError{
+			Provider: p.Name(),
+			Code:     fmt.Sprintf("%d", resp.StatusCode),
+			Message:  string(respBody),
+		}
+	}
+
+	// Parse response
+	var result struct {
+		Text     string  `json:"text"`
+		Language string  `json:"language,omitempty"`
+		Duration float64 `json:"duration,omitempty"`
+		Words    []struct {
+			Word  string  `json:"word"`
+			Start float64 `json:"start"`
+			End   float64 `json:"end"`
+		} `json:"words,omitempty"`
+	}
+
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		// Simple text response
+		return &STTResponse{Text: string(respBody)}, nil
+	}
+
+	sttResp := &STTResponse{
+		Text:     result.Text,
+		Language: result.Language,
+		Duration: result.Duration,
+	}
+
+	for _, w := range result.Words {
+		sttResp.Words = append(sttResp.Words, WordTimestamp{
+			Word:  w.Word,
+			Start: w.Start,
+			End:   w.End,
+		})
+	}
+
+	return sttResp, nil
+}
