@@ -9,39 +9,41 @@ import (
 // Tool/Function Calling
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Tool represents a function the model can call
+// Tool represents a function the model can call.
+// It follows the OpenAI tool calling schema.
 type Tool struct {
-	Type     string       `json:"type"`
-	Function ToolFunction `json:"function"`
+	Type     string       `json:"type"`     // "function" is currently the only supported type
+	Function ToolFunction `json:"function"` // The function definition
 }
 
-// ToolFunction describes the function schema
+// ToolFunction describes the function schema, including name, description, and parameters.
 type ToolFunction struct {
 	Name        string         `json:"name"`
 	Description string         `json:"description,omitempty"`
-	Parameters  map[string]any `json:"parameters,omitempty"`
+	Parameters  map[string]any `json:"parameters,omitempty"` // JSON Schema for parameters
 }
 
-// ToolCall represents a tool call from the model
+// ToolCall represents a specific invocation of a tool by the model.
 type ToolCall struct {
 	ID       string `json:"id"`
 	Type     string `json:"type"`
 	Function struct {
 		Name      string `json:"name"`
-		Arguments string `json:"arguments"`
+		Arguments string `json:"arguments"` // JSON string arguments
 	} `json:"function"`
 }
 
-// ToolResult is returned after executing a tool
+// ToolResult is the output returned to the model after executing a tool.
 type ToolResult struct {
 	ToolCallID string `json:"tool_call_id"`
 	Content    string `json:"content"`
 }
 
-// ToolHandler is a function that handles tool calls
+// ToolHandler is a callback function that handles tool execution.
+// It takes a map of arguments and returns a string result or error.
 type ToolHandler func(args map[string]any) (string, error)
 
-// ToolDef is a convenient way to define tools
+// ToolDef simplifies defining tools by bundling the schema and handler together.
 type ToolDef struct {
 	Name        string
 	Description string
@@ -53,7 +55,8 @@ type ToolDef struct {
 // Builder Methods for Tools
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Tool adds a tool/function the model can call
+// Tool adds a function tool to the request configuration.
+// It registers the tool definition but not a handler. Use OnToolCall to register a handler separately.
 func (b *Builder) Tool(name, description string, params map[string]any) *Builder {
 	b.tools = append(b.tools, Tool{
 		Type: "function",
@@ -66,7 +69,8 @@ func (b *Builder) Tool(name, description string, params map[string]any) *Builder
 	return b
 }
 
-// ToolDef adds a tool from a ToolDef struct (includes handler)
+// ToolDef adds a tool using a ToolDef struct.
+// This registers both the tool definition and the execution handler.
 func (b *Builder) ToolDef(def ToolDef) *Builder {
 	b.tools = append(b.tools, Tool{
 		Type: "function",
@@ -83,13 +87,14 @@ func (b *Builder) ToolDef(def ToolDef) *Builder {
 	return b
 }
 
-// Tools adds multiple tools at once
+// Tools adds multiple tool definitions at once.
 func (b *Builder) Tools(tools ...Tool) *Builder {
 	b.tools = append(b.tools, tools...)
 	return b
 }
 
-// OnToolCall registers a handler for a specific tool
+// OnToolCall registers a handler function for a specific tool name.
+// This is used when the tool was defined without a handler (e.g., via Tool() or raw Tool struct).
 func (b *Builder) OnToolCall(name string, handler ToolHandler) *Builder {
 	if b.toolHandlers == nil {
 		b.toolHandlers = make(map[string]ToolHandler)
@@ -102,7 +107,7 @@ func (b *Builder) OnToolCall(name string, handler ToolHandler) *Builder {
 // Tool Schema Helpers - DX-friendly parameter builders
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Params creates a JSON Schema object for function parameters
+// Params creates a new ParamBuilder for constructing JSON Schemas.
 func Params() *ParamBuilder {
 	return &ParamBuilder{
 		schema: map[string]any{
@@ -113,12 +118,13 @@ func Params() *ParamBuilder {
 	}
 }
 
-// ParamBuilder helps construct parameter schemas
+// ParamBuilder helps construct JSON Schema objects for tool parameters.
+// It provides a fluent API for defining strings, numbers, booleans, and arrays.
 type ParamBuilder struct {
 	schema map[string]any
 }
 
-// String adds a string parameter
+// String adds a string parameter to the schema.
 func (p *ParamBuilder) String(name, desc string, required bool) *ParamBuilder {
 	props := p.schema["properties"].(map[string]any)
 	props[name] = map[string]any{
@@ -132,7 +138,7 @@ func (p *ParamBuilder) String(name, desc string, required bool) *ParamBuilder {
 	return p
 }
 
-// Number adds a number parameter
+// Number adds a number (float) parameter to the schema.
 func (p *ParamBuilder) Number(name, desc string, required bool) *ParamBuilder {
 	props := p.schema["properties"].(map[string]any)
 	props[name] = map[string]any{
@@ -146,7 +152,7 @@ func (p *ParamBuilder) Number(name, desc string, required bool) *ParamBuilder {
 	return p
 }
 
-// Int adds an integer parameter
+// Int adds an integer parameter to the schema.
 func (p *ParamBuilder) Int(name, desc string, required bool) *ParamBuilder {
 	props := p.schema["properties"].(map[string]any)
 	props[name] = map[string]any{
@@ -160,7 +166,7 @@ func (p *ParamBuilder) Int(name, desc string, required bool) *ParamBuilder {
 	return p
 }
 
-// Bool adds a boolean parameter
+// Bool adds a boolean parameter to the schema.
 func (p *ParamBuilder) Bool(name, desc string, required bool) *ParamBuilder {
 	props := p.schema["properties"].(map[string]any)
 	props[name] = map[string]any{
@@ -174,7 +180,7 @@ func (p *ParamBuilder) Bool(name, desc string, required bool) *ParamBuilder {
 	return p
 }
 
-// Enum adds a string enum parameter
+// Enum adds a string parameter restricted to a set of values.
 func (p *ParamBuilder) Enum(name, desc string, values []string, required bool) *ParamBuilder {
 	props := p.schema["properties"].(map[string]any)
 	props[name] = map[string]any{
@@ -189,7 +195,7 @@ func (p *ParamBuilder) Enum(name, desc string, values []string, required bool) *
 	return p
 }
 
-// Array adds an array parameter
+// Array adds an array parameter with a specific item type.
 func (p *ParamBuilder) Array(name, desc, itemType string, required bool) *ParamBuilder {
 	props := p.schema["properties"].(map[string]any)
 	props[name] = map[string]any{
@@ -204,7 +210,7 @@ func (p *ParamBuilder) Array(name, desc, itemType string, required bool) *ParamB
 	return p
 }
 
-// Build returns the final schema
+// Build finalizes and returns the map representing the JSON Schema.
 func (p *ParamBuilder) Build() map[string]any {
 	return p.schema
 }
@@ -213,20 +219,21 @@ func (p *ParamBuilder) Build() map[string]any {
 // Tool Response Handling
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ToolResponse contains the model's response with potential tool calls
+// ToolResponse encapsulates the response from a model that may contain tool calls.
 type ToolResponse struct {
-	Content   string     // Text response (may be empty if tool calls)
+	Content   string     // Text response (may be empty if tool calls are present)
 	ToolCalls []ToolCall // Tool calls the model wants to make
 	Model     Model
 	Tokens    int
 }
 
-// HasToolCalls returns true if the response contains tool calls
+// HasToolCalls reports whether the response contains any tool calls.
 func (r *ToolResponse) HasToolCalls() bool {
 	return len(r.ToolCalls) > 0
 }
 
-// SendWithTools executes the request and returns tool calls if any
+// SendWithTools executes the request and returns a ToolResponse.
+// This is used for manual handling of tool calls. For automatic execution, use RunTools.
 func (b *Builder) SendWithTools() (*ToolResponse, error) {
 	msgs := b.buildMessages()
 
@@ -250,8 +257,9 @@ func (b *Builder) SendWithTools() (*ToolResponse, error) {
 	return result, nil
 }
 
-// RunTools executes tool calls and continues the conversation automatically
-// This is the "agentic" mode - it loops until the model stops calling tools
+// RunTools executes the request in an "agentic" loop.
+// It automatically executes tool calls and feeds the results back to the model.
+// It continues until the model provides a final text response or maxIterations is reached.
 func (b *Builder) RunTools(maxIterations int) (string, error) {
 	if maxIterations <= 0 {
 		maxIterations = 10 // sensible default

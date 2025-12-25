@@ -6,17 +6,20 @@ import (
 	"time"
 )
 
-// StreamCallback is called for each chunk of streamed response
+// StreamCallback is a function called for each chunk of a streamed response.
 type StreamCallback func(chunk string)
 
-// Stream sends a request and streams the response to stdout
+// Stream sends a request and prints the response chunks to stdout in real-time.
+// It is a convenience method for simple streaming to the console.
 func (b *Builder) Stream(prompt string) (string, error) {
 	return b.User(prompt).StreamResponse(func(chunk string) {
 		fmt.Print(chunk)
 	})
 }
 
-// StreamResponse sends a request and calls callback for each chunk
+// StreamResponse sends a request and calls the provided callback for each chunk of the response.
+// It handles rate limiting, error checking, and optional debug output.
+// Returns the full concatenated response string upon completion.
 func (b *Builder) StreamResponse(callback StreamCallback) (string, error) {
 	msgs := b.buildMessages()
 	start := time.Now()
@@ -93,7 +96,8 @@ func (b *Builder) StreamResponse(callback StreamCallback) (string, error) {
 	return resp.Content, nil
 }
 
-// StreamWithMeta streams and returns metadata
+// StreamWithMeta sends a request, streams the response via callback, and returns full metadata.
+// This is useful when you need token usage stats or latency information along with the streamed content.
 func (b *Builder) StreamWithMeta(callback StreamCallback) (*ResponseMeta, error) {
 	msgs := b.buildMessages()
 	start := time.Now()

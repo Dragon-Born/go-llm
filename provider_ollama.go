@@ -17,13 +17,13 @@ import (
 
 const ollamaDefaultURL = "http://localhost:11434"
 
-// OllamaProvider implements Provider for local Ollama
+// OllamaProvider implements Provider for local Ollama.
 type OllamaProvider struct {
 	config     ProviderConfig
 	httpClient *http.Client
 }
 
-// NewOllamaProvider creates an Ollama provider
+// NewOllamaProvider creates an OllamaProvider.
 func NewOllamaProvider(config ProviderConfig) *OllamaProvider {
 	if config.BaseURL == "" {
 		config.BaseURL = ollamaDefaultURL
@@ -36,10 +36,12 @@ func NewOllamaProvider(config ProviderConfig) *OllamaProvider {
 	return &OllamaProvider{config: config, httpClient: client}
 }
 
+// Name returns the provider identifier ("ollama").
 func (p *OllamaProvider) Name() string {
 	return "ollama"
 }
 
+// Capabilities reports the features supported by this provider implementation.
 func (p *OllamaProvider) Capabilities() ProviderCapabilities {
 	return ProviderCapabilities{
 		Tools:     true, // Ollama supports tools with some models
@@ -54,6 +56,7 @@ func (p *OllamaProvider) Capabilities() ProviderCapabilities {
 // Send
 // ═══════════════════════════════════════════════════════════════════════════
 
+// Send executes a non-streaming request.
 func (p *OllamaProvider) Send(ctx context.Context, req *ProviderRequest) (*ProviderResponse, error) {
 	ollamaReq := p.buildRequest(req)
 
@@ -95,6 +98,7 @@ func (p *OllamaProvider) Send(ctx context.Context, req *ProviderRequest) (*Provi
 // SendStream
 // ═══════════════════════════════════════════════════════════════════════════
 
+// SendStream executes a streaming request and invokes callback for each chunk.
 func (p *OllamaProvider) SendStream(ctx context.Context, req *ProviderRequest, callback StreamCallback) (*ProviderResponse, error) {
 	ollamaReq := p.buildRequest(req)
 	ollamaReq.Stream = true

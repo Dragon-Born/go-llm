@@ -12,7 +12,7 @@ import (
 // Document / PDF Input
 // ═══════════════════════════════════════════════════════════════════════════
 
-// DocumentInput represents a document (PDF) to include in the request
+// DocumentInput represents a document (PDF) included in a request.
 type DocumentInput struct {
 	Data     string // base64-encoded data
 	URL      string // or URL (mutually exclusive with Data)
@@ -24,7 +24,7 @@ type DocumentInput struct {
 // Builder Methods for Documents
 // ═══════════════════════════════════════════════════════════════════════════
 
-// PDF adds a PDF document from a local file path
+// PDF adds a PDF document from a local file path.
 func (b *Builder) PDF(path string) *Builder {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -41,7 +41,7 @@ func (b *Builder) PDF(path string) *Builder {
 	return b
 }
 
-// PDFURL adds a PDF document from a URL
+// PDFURL adds a PDF document from a URL.
 func (b *Builder) PDFURL(url string) *Builder {
 	b.documents = append(b.documents, DocumentInput{
 		URL:      url,
@@ -50,7 +50,7 @@ func (b *Builder) PDFURL(url string) *Builder {
 	return b
 }
 
-// PDFBase64 adds a PDF document from base64-encoded data
+// PDFBase64 adds a PDF document from base64-encoded data.
 func (b *Builder) PDFBase64(data string) *Builder {
 	b.documents = append(b.documents, DocumentInput{
 		Data:     data,
@@ -59,7 +59,7 @@ func (b *Builder) PDFBase64(data string) *Builder {
 	return b
 }
 
-// PDFs adds multiple PDF documents at once
+// PDFs adds multiple PDF documents at once.
 func (b *Builder) PDFs(paths ...string) *Builder {
 	for _, path := range paths {
 		b.PDF(path)
@@ -67,7 +67,7 @@ func (b *Builder) PDFs(paths ...string) *Builder {
 	return b
 }
 
-// Document adds a document with auto-detected type (PDF, etc.)
+// Document adds a document with auto-detected type (PDF, etc.).
 func (b *Builder) Document(path string) *Builder {
 	ext := strings.ToLower(filepath.Ext(path))
 	switch ext {
@@ -79,7 +79,7 @@ func (b *Builder) Document(path string) *Builder {
 	}
 }
 
-// DocumentURL adds a document from URL with auto-detected type
+// DocumentURL adds a document from URL with auto-detected type.
 func (b *Builder) DocumentURL(url string) *Builder {
 	// Check URL extension
 	lower := strings.ToLower(url)
@@ -94,7 +94,7 @@ func (b *Builder) DocumentURL(url string) *Builder {
 // Internal Helpers
 // ═══════════════════════════════════════════════════════════════════════════
 
-// detectDocMimeType returns the MIME type based on file extension
+// detectDocMimeType returns the MIME type based on file extension.
 func detectDocMimeType(path string) string {
 	ext := strings.ToLower(filepath.Ext(path))
 	switch ext {
@@ -105,12 +105,12 @@ func detectDocMimeType(path string) string {
 	}
 }
 
-// HasDocuments returns true if the builder has documents attached
+// HasDocuments reports whether the builder has documents attached.
 func (b *Builder) HasDocuments() bool {
 	return len(b.documents) > 0
 }
 
-// GetDocuments returns the attached documents
+// GetDocuments returns the attached documents.
 func (b *Builder) GetDocuments() []DocumentInput {
 	return b.documents
 }

@@ -18,13 +18,13 @@ import (
 
 const openAIBaseURL = "https://api.openai.com/v1"
 
-// OpenAIProvider implements Provider for OpenAI
+// OpenAIProvider implements Provider for OpenAI's API.
 type OpenAIProvider struct {
 	config     ProviderConfig
 	httpClient *http.Client
 }
 
-// NewOpenAIProvider creates an OpenAI provider
+// NewOpenAIProvider creates an OpenAIProvider.
 func NewOpenAIProvider(config ProviderConfig) *OpenAIProvider {
 	if config.BaseURL == "" {
 		config.BaseURL = openAIBaseURL
@@ -39,10 +39,12 @@ func NewOpenAIProvider(config ProviderConfig) *OpenAIProvider {
 	return &OpenAIProvider{config: config, httpClient: client}
 }
 
+// Name returns the provider identifier ("openai").
 func (p *OpenAIProvider) Name() string {
 	return "openai"
 }
 
+// Capabilities reports the features supported by this provider implementation.
 func (p *OpenAIProvider) Capabilities() ProviderCapabilities {
 	return ProviderCapabilities{
 		Tools:      true,
@@ -70,6 +72,7 @@ func (p *OpenAIProvider) Capabilities() ProviderCapabilities {
 // Send
 // ═══════════════════════════════════════════════════════════════════════════
 
+// Send executes a non-streaming request.
 func (p *OpenAIProvider) Send(ctx context.Context, req *ProviderRequest) (*ProviderResponse, error) {
 	if p.config.APIKey == "" {
 		return nil, &ProviderError{
@@ -119,6 +122,7 @@ func (p *OpenAIProvider) Send(ctx context.Context, req *ProviderRequest) (*Provi
 // SendStream
 // ═══════════════════════════════════════════════════════════════════════════
 
+// SendStream executes a streaming request and invokes callback for each chunk.
 func (p *OpenAIProvider) SendStream(ctx context.Context, req *ProviderRequest, callback StreamCallback) (*ProviderResponse, error) {
 	if p.config.APIKey == "" {
 		return nil, &ProviderError{

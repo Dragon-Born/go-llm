@@ -15,7 +15,7 @@ var (
 	statsLock sync.Mutex
 )
 
-// Stats holds session statistics
+// Stats holds session statistics aggregated across requests.
 type Stats struct {
 	Requests         int
 	TotalTokens      int
@@ -45,21 +45,21 @@ func trackRequest(meta *ResponseMeta) {
 	stats.ModelUsage[meta.Model]++
 }
 
-// GetStats returns current session statistics
+// GetStats returns the current session statistics.
 func GetStats() Stats {
 	statsLock.Lock()
 	defer statsLock.Unlock()
 	return *stats
 }
 
-// ResetStats clears all statistics
+// ResetStats clears all statistics.
 func ResetStats() {
 	statsLock.Lock()
 	defer statsLock.Unlock()
 	stats = &Stats{}
 }
 
-// PrintStats displays session statistics
+// PrintStats displays session statistics to stdout.
 func PrintStats() {
 	s := GetStats()
 
@@ -86,7 +86,7 @@ func PrintStats() {
 	fmt.Println()
 }
 
-// EstimateCost returns estimated cost in USD based on token usage
+// EstimateCost returns an estimated cost in USD based on token usage.
 func EstimateCost() float64 {
 	s := GetStats()
 	// Use average pricing if we can't determine per-model
@@ -95,7 +95,7 @@ func EstimateCost() float64 {
 	return inputCost + outputCost
 }
 
-// PrintCost displays estimated cost
+// PrintCost displays estimated cost to stdout.
 func PrintCost() {
 	cost := EstimateCost()
 	s := GetStats()

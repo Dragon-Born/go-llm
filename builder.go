@@ -11,19 +11,42 @@ import (
 	"time"
 )
 
-// Builder provides a fluent API for constructing AI requests
+// Builder provides a fluent API for constructing AI requests.
+// It allows chaining methods to configure the model, system prompt, messages,
+// tools, and other parameters before sending the request.
 type Builder struct {
-	model       Model
-	system      string
-	messages    []Message
-	vars        Vars
+	// model is the AI model to use for the request.
+	model Model
+
+	// system is the system prompt (instructions for the AI).
+	system string
+
+	// messages is the history of the conversation.
+	messages []Message
+
+	// vars holds template variables for prompt substitution.
+	vars Vars
+
+	// fileContext contains file contents injected into the context.
 	fileContext []string // file contents to inject (renamed from context)
-	debug       bool
-	maxRetries  int
-	fallbacks   []Model
-	jsonMode    bool
+
+	// debug enables verbose logging for this request.
+	debug bool
+
+	// maxRetries specifies the number of retry attempts on failure.
+	maxRetries int
+
+	// fallbacks is a list of models to try if the primary model fails.
+	fallbacks []Model
+
+	// jsonMode forces the model to output valid JSON.
+	jsonMode bool
+
+	// temperature controls randomness (0.0 to 2.0).
 	temperature *float64
-	thinking    ThinkingLevel
+
+	// thinking controls the reasoning effort level.
+	thinking ThinkingLevel
 
 	// Tool calling (function tools)
 	tools        []Tool
@@ -54,7 +77,8 @@ type Builder struct {
 	validators []Validator
 }
 
-// New creates a new builder for the specified model
+// New creates a new Builder instance for the specified model.
+// It initializes the builder with empty messages and default settings.
 func New(model Model) *Builder {
 	return &Builder{
 		model:       model,
@@ -69,13 +93,16 @@ func New(model Model) *Builder {
 // System Prompt Methods
 // ═══════════════════════════════════════════════════════════════════════════
 
-// System sets the system prompt
+// System sets the system prompt for the request.
+// The system prompt defines the behavior, persona, and constraints of the AI.
 func (b *Builder) System(prompt string) *Builder {
 	b.system = prompt
 	return b
 }
 
-// SystemFile loads system prompt from a file
+// SystemFile loads the system prompt from a file at the given path.
+// It reads the file content and sets it as the system prompt.
+// If the file cannot be read, it logs an error and leaves the system prompt unchanged.
 func (b *Builder) SystemFile(path string) *Builder {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -90,13 +117,15 @@ func (b *Builder) SystemFile(path string) *Builder {
 // Message Methods
 // ═══════════════════════════════════════════════════════════════════════════
 
-// User adds a user message
+// User adds a user message to the conversation history.
+// This represents the input from the human user.
 func (b *Builder) User(content string) *Builder {
 	b.messages = append(b.messages, Message{Role: "user", Content: content})
 	return b
 }
 
-// Assistant adds an assistant message (for context)
+// Assistant adds an assistant message to the conversation history.
+// This is used to provide context from previous turns or to pre-fill the assistant's response.
 func (b *Builder) Assistant(content string) *Builder {
 	b.messages = append(b.messages, Message{Role: "assistant", Content: content})
 	return b
@@ -106,7 +135,8 @@ func (b *Builder) Assistant(content string) *Builder {
 // Context Injection - Add files as context
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Context adds a file's content to the context
+// Context adds the content of a file (or files matching a glob pattern) to the context.
+// The file content is formatted and appended to the system prompt context area.
 func (b *Builder) Context(path string) *Builder {
 	// Check for glob pattern
 	if strings.Contains(path, "*") {
@@ -133,7 +163,8 @@ func (b *Builder) addFileContext(path string) {
 	b.fileContext = append(b.fileContext, fmt.Sprintf("--- %s ---\n%s", path, string(data)))
 }
 
-// ContextString adds raw string as context
+// ContextString adds a raw string as context with a given name.
+// This is useful for adding in-memory data or snippets as context.
 func (b *Builder) ContextString(name, content string) *Builder {
 	b.fileContext = append(b.fileContext, fmt.Sprintf("--- %s ---\n%s", name, content))
 	return b
@@ -143,7 +174,8 @@ func (b *Builder) ContextString(name, content string) *Builder {
 // Template Variables
 // ═══════════════════════════════════════════════════════════════════════════
 
-// With adds template variables to replace {{key}} in prompts
+// With adds multiple template variables to replace {{key}} in prompts.
+// It merges the provided map with existing variables.
 func (b *Builder) With(vars Vars) *Builder {
 	for k, v := range vars {
 		b.vars[k] = v
@@ -151,7 +183,7 @@ func (b *Builder) With(vars Vars) *Builder {
 	return b
 }
 
-// Var adds a single template variable
+// Var adds a single template variable to replace {{key}} with the value.
 func (b *Builder) Var(key, value string) *Builder {
 	b.vars[key] = value
 	return b
@@ -161,13 +193,15 @@ func (b *Builder) Var(key, value string) *Builder {
 // Retry & Fallback
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Retry sets max retry attempts on failure
+// Retry sets the maximum number of retry attempts for failed requests.
+// This uses a simple retry mechanism. For advanced backoff, use WithRetryConfig (if available) or check retry.go.
 func (b *Builder) Retry(times int) *Builder {
 	b.maxRetries = times
 	return b
 }
 
-// Fallback sets fallback models to try if primary fails
+// Fallback sets a list of fallback models to try if the primary model fails.
+// The builder will attempt each model in order until one succeeds or all fail.
 func (b *Builder) Fallback(models ...Model) *Builder {
 	b.fallbacks = models
 	return b
@@ -177,7 +211,8 @@ func (b *Builder) Fallback(models ...Model) *Builder {
 // JSON Mode
 // ═══════════════════════════════════════════════════════════════════════════
 
-// JSON enables JSON mode (instructs model to return JSON)
+// JSON enables JSON mode for the request.
+// It instructs the model to return valid JSON output and enforces it if supported by the provider.
 func (b *Builder) JSON() *Builder {
 	b.jsonMode = true
 	return b
@@ -187,7 +222,9 @@ func (b *Builder) JSON() *Builder {
 // Temperature
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Temperature sets the sampling temperature (0.0-2.0)
+// Temperature sets the sampling temperature (0.0 to 2.0).
+// Higher values (e.g., 0.8) make output more random/creative.
+// Lower values (e.g., 0.2) make output more focused/deterministic.
 func (b *Builder) Temperature(temp float64) *Builder {
 	b.temperature = &temp
 	return b
@@ -197,29 +234,32 @@ func (b *Builder) Temperature(temp float64) *Builder {
 // Thinking Level (Reasoning Effort)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Thinking sets the reasoning/thinking effort level (minimal, low, medium, high)
+// Thinking sets the reasoning/thinking effort level (minimal, low, medium, high).
+// This is supported by reasoning models like Gemini and others.
 func (b *Builder) Thinking(level ThinkingLevel) *Builder {
 	b.thinking = level
 	return b
 }
 
-// ThinkMinimal sets thinking to minimal (Gemini Flash only - fastest)
+// ThinkMinimal sets thinking to minimal effort.
+// Currently optimized for Gemini Flash (fastest reasoning).
 func (b *Builder) ThinkMinimal() *Builder { return b.Thinking(ThinkingMinimal) }
 
-// ThinkLow sets thinking to low effort
+// ThinkLow sets thinking to low effort.
 func (b *Builder) ThinkLow() *Builder { return b.Thinking(ThinkingLow) }
 
-// ThinkMedium sets thinking to medium effort
+// ThinkMedium sets thinking to medium effort.
 func (b *Builder) ThinkMedium() *Builder { return b.Thinking(ThinkingMedium) }
 
-// ThinkHigh sets thinking to high effort
+// ThinkHigh sets thinking to high effort.
 func (b *Builder) ThinkHigh() *Builder { return b.Thinking(ThinkingHigh) }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Debug Mode
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Debug enables debug output for this request
+// Debug enables debug output for this specific request.
+// It prints the request payload and response details to the console.
 func (b *Builder) Debug() *Builder {
 	b.debug = true
 	return b
@@ -229,7 +269,7 @@ func (b *Builder) Debug() *Builder {
 // Execution
 // ═══════════════════════════════════════════════════════════════════════════
 
-// buildMessages constructs the final message list
+// buildMessages constructs the final message list by processing templates and context.
 func (b *Builder) buildMessages() []Message {
 	var msgs []Message
 
@@ -311,29 +351,46 @@ func (b *Builder) buildMessages() []Message {
 	return msgs
 }
 
-// Send executes the request and returns the response
+// Send executes the request and returns the response content as a string.
+// It handles retries, fallbacks, and error handling as configured.
 func (b *Builder) Send() (string, error) {
 	meta := b.SendWithMeta()
 	return meta.Content, meta.Error
 }
 
-// ResponseMeta contains response metadata
+// ResponseMeta contains metadata about the AI response.
 type ResponseMeta struct {
-	Content          string
-	Error            error
-	Model            Model
-	Tokens           int
-	PromptTokens     int
+	// Content is the actual text response from the model.
+	Content string
+
+	// Error indicates if the request failed.
+	Error error
+
+	// Model is the model that actually fulfilled the request (could be a fallback).
+	Model Model
+
+	// Tokens is the total number of tokens used.
+	Tokens int
+
+	// PromptTokens is the number of tokens in the prompt.
+	PromptTokens int
+
+	// CompletionTokens is the number of tokens in the completion.
 	CompletionTokens int
-	Latency          time.Duration
-	Retries          int
+
+	// Latency is the duration of the request.
+	Latency time.Duration
+
+	// Retries is the number of retry attempts made.
+	Retries int
 
 	// Responses API output (populated when using built-in tools)
 	// Contains citations, sources, and tool call details
 	ResponsesOutput *ResponsesOutput
 }
 
-// SendWithMeta executes the request and returns response with metadata
+// SendWithMeta executes the request and returns the response with full metadata.
+// This includes token usage, latency, and the specific model used.
 func (b *Builder) SendWithMeta() *ResponseMeta {
 	msgs := b.buildMessages()
 	start := time.Now()
@@ -494,12 +551,14 @@ func (b *Builder) SendWithMeta() *ResponseMeta {
 	return &ResponseMeta{Error: lastErr, Model: b.model, Latency: time.Since(start), Retries: totalRetries}
 }
 
-// Ask is an alias for User().Send() - quick question
+// Ask is a convenience alias for User(prompt).Send().
+// It quickly sends a user message and returns the response.
 func (b *Builder) Ask(prompt string) (string, error) {
 	return b.User(prompt).Send()
 }
 
-// AskJSON sends a request and parses JSON response into target
+// AskJSON sends a request and attempts to unmarshal the JSON response into the target struct.
+// It automatically enables JSON mode and strips code blocks from the response.
 func (b *Builder) AskJSON(prompt string, target any) error {
 	resp, err := b.JSON().User(prompt).Send()
 	if err != nil {
@@ -519,7 +578,8 @@ func (b *Builder) AskJSON(prompt string, target any) error {
 // Conversation Mode
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Chat returns a conversation helper for interactive use
+// Chat initiates a conversation mode using this builder's configuration.
+// It returns a Conversation struct that manages message history.
 func (b *Builder) Chat() *Conversation {
 	return &Conversation{
 		builder: b,
@@ -531,24 +591,24 @@ func (b *Builder) Chat() *Conversation {
 // Model Switching
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Model changes the model for this builder
+// Model changes the model for this builder.
 func (b *Builder) Model(model Model) *Builder {
 	b.model = model
 	return b
 }
 
-// UseModel changes model by string ID
+// UseModel changes the model using a string ID (useful for models not defined in constants).
 func (b *Builder) UseModel(modelID string) *Builder {
 	b.model = Model(modelID)
 	return b
 }
 
-// GetModel returns the current model
+// GetModel returns the currently configured model.
 func (b *Builder) GetModel() Model {
 	return b.model
 }
 
-// GetSystem returns the current system prompt
+// GetSystem returns the current system prompt.
 func (b *Builder) GetSystem() string {
 	return b.system
 }
@@ -557,25 +617,29 @@ func (b *Builder) GetSystem() string {
 // Provider Switching
 // ═══════════════════════════════════════════════════════════════════════════
 
-// WithClient sets a specific client/provider for this builder
+// WithClient sets a specific client for this builder.
+// This overrides the default client logic.
 func (b *Builder) WithClient(client *Client) *Builder {
 	b.client = client
 	return b
 }
 
-// Provider switches to a different provider
+// Provider switches to a different provider for this builder.
+// It creates a new client for the specified provider type.
 // Usage: ai.Claude().Provider(ai.ProviderAnthropic).Ask("...")
 func (b *Builder) Provider(providerType ProviderType) *Builder {
 	b.client = NewClient(providerType)
 	return b
 }
 
-// GetClient returns the current client (nil means default)
+// GetClient returns the current client associated with the builder.
+// It returns nil if the default client is being used.
 func (b *Builder) GetClient() *Client {
 	return b.client
 }
 
-// Clone creates a copy of this builder
+// Clone creates a deep copy of the builder.
+// This is useful when you want to branch off a configuration without affecting the original.
 func (b *Builder) Clone() *Builder {
 	var tempCopy *float64
 	if b.temperature != nil {

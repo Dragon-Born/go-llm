@@ -30,7 +30,7 @@ type Agent struct {
 	timeout       time.Duration
 }
 
-// AgentStep represents a single step in the agent's execution
+// AgentStep represents a single step in the agent's execution.
 type AgentStep struct {
 	Number      int            `json:"number"`
 	Thought     string         `json:"thought,omitempty"`
@@ -41,7 +41,7 @@ type AgentStep struct {
 	Tokens      int            `json:"tokens,omitempty"`
 }
 
-// AgentResult is the final result of agent execution
+// AgentResult is the final result of agent execution.
 type AgentResult struct {
 	Answer      string         `json:"answer"`
 	Steps       []AgentStep    `json:"steps"`
@@ -56,7 +56,7 @@ type AgentResult struct {
 // Agent Constructor
 // ═══════════════════════════════════════════════════════════════════════════
 
-// NewAgent creates a new agent with the given builder as the base
+// NewAgent creates a new agent with the given builder as the base.
 func NewAgent(builder *Builder) *Agent {
 	return &Agent{
 		builder:  builder.Clone(),
@@ -67,7 +67,7 @@ func NewAgent(builder *Builder) *Agent {
 	}
 }
 
-// Agent creates an agent from this builder
+// Agent creates an agent from this builder.
 func (b *Builder) Agent() *Agent {
 	return NewAgent(b)
 }
@@ -76,13 +76,13 @@ func (b *Builder) Agent() *Agent {
 // Agent Configuration - Fluent API
 // ═══════════════════════════════════════════════════════════════════════════
 
-// MaxSteps sets the maximum number of reasoning steps
+// MaxSteps sets the maximum number of reasoning steps.
 func (a *Agent) MaxSteps(n int) *Agent {
 	a.maxSteps = n
 	return a
 }
 
-// Tool adds a tool the agent can use
+// Tool adds a tool the agent can use.
 func (a *Agent) Tool(name, description string, params map[string]any, handler ToolHandler) *Agent {
 	a.tools[name] = handler
 	a.toolDefs = append(a.toolDefs, Tool{
@@ -96,30 +96,30 @@ func (a *Agent) Tool(name, description string, params map[string]any, handler To
 	return a
 }
 
-// ToolDef adds a tool from a ToolDef struct
+// ToolDef adds a tool from a ToolDef struct.
 func (a *Agent) ToolDef(def ToolDef) *Agent {
 	return a.Tool(def.Name, def.Description, def.Parameters, def.Handler)
 }
 
-// WithContext sets a context for cancellation
+// WithContext sets a context for cancellation.
 func (a *Agent) WithContext(ctx context.Context) *Agent {
 	a.ctx = ctx
 	return a
 }
 
-// Timeout sets a timeout for the entire agent run
+// Timeout sets a timeout for the entire agent run.
 func (a *Agent) Timeout(d time.Duration) *Agent {
 	a.timeout = d
 	return a
 }
 
-// State sets initial state for the agent
+// State sets initial state for the agent.
 func (a *Agent) State(state map[string]any) *Agent {
 	a.state = state
 	return a
 }
 
-// Set sets a single state value
+// Set sets a single state value.
 func (a *Agent) Set(key string, value any) *Agent {
 	a.state[key] = value
 	return a
@@ -129,37 +129,37 @@ func (a *Agent) Set(key string, value any) *Agent {
 // Agent Callbacks - Observability
 // ═══════════════════════════════════════════════════════════════════════════
 
-// OnStep registers a callback for each step
+// OnStep registers a callback for each step.
 func (a *Agent) OnStep(fn func(AgentStep)) *Agent {
 	a.onStep = fn
 	return a
 }
 
-// OnThought registers a callback for agent thoughts
+// OnThought registers a callback for agent thoughts.
 func (a *Agent) OnThought(fn func(string)) *Agent {
 	a.onThought = fn
 	return a
 }
 
-// OnAction registers a callback before each action
+// OnAction registers a callback before each action.
 func (a *Agent) OnAction(fn func(action string, input map[string]any)) *Agent {
 	a.onAction = fn
 	return a
 }
 
-// OnObservation registers a callback after each action
+// OnObservation registers a callback after each action.
 func (a *Agent) OnObservation(fn func(action, result string)) *Agent {
 	a.onObservation = fn
 	return a
 }
 
-// OnComplete registers a callback when agent finishes
+// OnComplete registers a callback when agent finishes.
 func (a *Agent) OnComplete(fn func(AgentResult)) *Agent {
 	a.onComplete = fn
 	return a
 }
 
-// RequireApproval requires human approval before each action
+// RequireApproval requires human approval before each action.
 func (a *Agent) RequireApproval(fn func(AgentStep) bool) *Agent {
 	a.humanApproval = fn
 	return a
@@ -169,7 +169,7 @@ func (a *Agent) RequireApproval(fn func(AgentStep) bool) *Agent {
 // Agent Execution
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Run executes the agent with the given task
+// Run executes the agent with the given task.
 func (a *Agent) Run(task string) AgentResult {
 	start := time.Now()
 	result := AgentResult{

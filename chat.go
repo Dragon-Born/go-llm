@@ -5,13 +5,15 @@ import (
 	"strings"
 )
 
-// Conversation maintains chat history for multi-turn conversations
+// Conversation maintains chat history for multi-turn conversations.
+// It wraps a Builder and automatically appends user and assistant messages to the history.
 type Conversation struct {
 	builder *Builder
 	history []Message
 }
 
-// Say sends a message and continues the conversation
+// Say sends a message to the AI and returns the response.
+// It appends the user's message and the AI's response to the conversation history.
 func (c *Conversation) Say(message string) (string, error) {
 	// Add user message to history
 	c.history = append(c.history, Message{Role: "user", Content: message})
@@ -37,7 +39,8 @@ func (c *Conversation) Say(message string) (string, error) {
 	return content, nil
 }
 
-// buildMessages combines system + history
+// buildMessages combines the system prompt with the conversation history.
+// It also handles template substitution and context injection.
 func (c *Conversation) buildMessages() []Message {
 	var msgs []Message
 
@@ -70,12 +73,13 @@ func (c *Conversation) buildMessages() []Message {
 	return msgs
 }
 
-// History returns the conversation history
+// History returns the full conversation history.
 func (c *Conversation) History() []Message {
 	return c.history
 }
 
-// Clear resets the conversation history
+// Clear resets the conversation history, removing all messages.
+// The system prompt and other builder settings are preserved.
 func (c *Conversation) Clear() {
 	c.history = []Message{}
 	if Pretty {
@@ -83,7 +87,8 @@ func (c *Conversation) Clear() {
 	}
 }
 
-// Dump prints the full conversation history
+// Dump prints the full conversation history to stdout for debugging.
+// It uses colored output if enabled.
 func (c *Conversation) Dump() {
 	fmt.Println()
 	fmt.Println(colorCyan("═══════════════════════════════════════════════════════════════"))
@@ -109,7 +114,8 @@ func (c *Conversation) Dump() {
 	fmt.Printf("Total messages: %d\n\n", len(c.history))
 }
 
-// LastResponse returns the last assistant response
+// LastResponse returns the content of the last assistant response.
+// Returns an empty string if there are no assistant messages.
 func (c *Conversation) LastResponse() string {
 	for i := len(c.history) - 1; i >= 0; i-- {
 		if c.history[i].Role == "assistant" {
@@ -121,7 +127,8 @@ func (c *Conversation) LastResponse() string {
 	return ""
 }
 
-// Summarize returns a brief summary of the conversation
+// Summarize returns a brief statistical summary of the conversation.
+// Includes model name, total message count, and breakdown by role.
 func (c *Conversation) Summarize() string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Model: %s\n", c.builder.model))

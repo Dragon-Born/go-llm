@@ -9,8 +9,8 @@ import (
 // ═══════════════════════════════════════════════════════════════════════════
 
 var (
-	// DefaultProvider determines which provider is used by package-level shortcuts
-	// Change this to switch all ai.Claude(), ai.GPT5() etc. to a different backend
+	// DefaultProvider determines which provider is used by package-level shortcuts.
+	// Change this to switch ai.Claude(), ai.GPT5(), etc. to a different backend.
 	DefaultProvider = ProviderOpenRouter
 
 	// Provider clients (lazy-initialized, thread-safe)
@@ -27,8 +27,8 @@ var (
 // These let you explicitly choose which provider to use
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Anthropic returns a client for Anthropic's API
-// Usage: ai.Anthropic().Claude().Ask("...")
+// Anthropic returns a client for Anthropic's API.
+// Example: ai.Anthropic().Claude().Ask("...")
 func Anthropic() *Client {
 	clientsMu.Lock()
 	defer clientsMu.Unlock()
@@ -39,8 +39,8 @@ func Anthropic() *Client {
 	return anthropicClient
 }
 
-// OpenAI returns a client for OpenAI's API
-// Usage: ai.OpenAI().GPT4o().Ask("...")
+// OpenAI returns a client for OpenAI's API.
+// Example: ai.OpenAI().GPT4o().Ask("...")
 func OpenAI() *Client {
 	clientsMu.Lock()
 	defer clientsMu.Unlock()
@@ -51,8 +51,8 @@ func OpenAI() *Client {
 	return openaiClient
 }
 
-// Google returns a client for Google's Gemini API
-// Usage: ai.Google().Gemini().Ask("...")
+// Google returns a client for Google's Gemini API.
+// Example: ai.Google().Gemini().Ask("...")
 func Google() *Client {
 	clientsMu.Lock()
 	defer clientsMu.Unlock()
@@ -63,8 +63,8 @@ func Google() *Client {
 	return googleClient
 }
 
-// Ollama returns a client for local Ollama (default: localhost:11434)
-// Usage: ai.Ollama().Use("llama3:8b").Ask("...")
+// Ollama returns a client for local Ollama (default: localhost:11434).
+// Example: ai.Ollama().Use("llama3:8b").Ask("...")
 func Ollama() *Client {
 	clientsMu.Lock()
 	defer clientsMu.Unlock()
@@ -75,20 +75,20 @@ func Ollama() *Client {
 	return ollamaClient
 }
 
-// OllamaAt returns a client for Ollama at a custom URL
-// Usage: ai.OllamaAt("http://gpu-server:11434").Use("llama3:70b").Ask("...")
+// OllamaAt returns a client for Ollama at a custom URL.
+// Example: ai.OllamaAt("http://gpu-server:11434").Use("llama3:70b").Ask("...")
 func OllamaAt(url string) *Client {
 	return NewClient(ProviderOllama, WithBaseURL(url))
 }
 
-// Azure returns a client for Azure OpenAI
-// Usage: ai.Azure("https://mycompany.openai.azure.com").GPT4o().Ask("...")
+// Azure returns a client for Azure OpenAI.
+// Example: ai.Azure("https://mycompany.openai.azure.com").GPT4o().Ask("...")
 func Azure(endpoint string) *Client {
 	return NewClient(ProviderAzure, WithBaseURL(endpoint))
 }
 
-// OpenRouter returns a client for OpenRouter (explicit)
-// Usage: ai.OpenRouter().Claude().Ask("...")
+// OpenRouter returns a client for OpenRouter (explicit).
+// Example: ai.OpenRouter().Claude().Ask("...")
 func OpenRouter() *Client {
 	return getDefaultClient() // OpenRouter is the default
 }
@@ -108,7 +108,7 @@ func getDefaultClient() *Client {
 	return defaultClient
 }
 
-// SetDefaultProvider changes the default provider and resets the default client
+// SetDefaultProvider changes the default provider and resets the default client.
 func SetDefaultProvider(provider ProviderType) {
 	clientsMu.Lock()
 	defer clientsMu.Unlock()
@@ -117,7 +117,7 @@ func SetDefaultProvider(provider ProviderType) {
 	defaultClient = nil // Will be recreated on next use
 }
 
-// SetDefaultClient sets a custom default client
+// SetDefaultClient sets a custom default client.
 func SetDefaultClient(client *Client) {
 	clientsMu.Lock()
 	defer clientsMu.Unlock()
@@ -125,7 +125,7 @@ func SetDefaultClient(client *Client) {
 	defaultClient = client
 }
 
-// ResetClients clears all cached clients (useful for testing)
+// ResetClients clears all cached clients (useful for testing).
 func ResetClients() {
 	clientsMu.Lock()
 	defer clientsMu.Unlock()
@@ -141,22 +141,22 @@ func ResetClients() {
 // Convenience: Create clients with custom config
 // ═══════════════════════════════════════════════════════════════════════════
 
-// AnthropicWith creates an Anthropic client with custom options
+// AnthropicWith creates an Anthropic client with custom options.
 func AnthropicWith(opts ...ClientOption) *Client {
 	return NewClient(ProviderAnthropic, opts...)
 }
 
-// OpenAIWith creates an OpenAI client with custom options
+// OpenAIWith creates an OpenAI client with custom options.
 func OpenAIWith(opts ...ClientOption) *Client {
 	return NewClient(ProviderOpenAI, opts...)
 }
 
-// GoogleWith creates a Google/Gemini client with custom options
+// GoogleWith creates a Google/Gemini client with custom options.
 func GoogleWith(opts ...ClientOption) *Client {
 	return NewClient(ProviderGoogle, opts...)
 }
 
-// OllamaWith creates an Ollama client with custom options
+// OllamaWith creates an Ollama client with custom options.
 func OllamaWith(opts ...ClientOption) *Client {
 	return NewClient(ProviderOllama, opts...)
 }

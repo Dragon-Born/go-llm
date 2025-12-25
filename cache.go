@@ -16,7 +16,7 @@ var (
 	cacheLock sync.RWMutex
 )
 
-// CacheKey generates a unique key for a request
+// cacheKey generates a unique key for a request.
 func cacheKey(model Model, messages []Message, opts SendOptions) string {
 	data, _ := json.Marshal(struct {
 		Model    string    `json:"m"`
@@ -34,7 +34,7 @@ func cacheKey(model Model, messages []Message, opts SendOptions) string {
 	return hex.EncodeToString(hash[:])
 }
 
-// GetCached returns cached response if available
+// getCached returns a cached response if available.
 func getCached(model Model, messages []Message, opts SendOptions) (string, bool) {
 	if !Cache {
 		return "", false
@@ -48,7 +48,7 @@ func getCached(model Model, messages []Message, opts SendOptions) (string, bool)
 	return resp, ok
 }
 
-// SetCached stores a response in cache
+// setCached stores a response in cache.
 func setCached(model Model, messages []Message, opts SendOptions, response string) {
 	if !Cache {
 		return
@@ -61,14 +61,14 @@ func setCached(model Model, messages []Message, opts SendOptions, response strin
 	cache[key] = response
 }
 
-// ClearCache empties the cache
+// ClearCache empties the in-memory cache.
 func ClearCache() {
 	cacheLock.Lock()
 	defer cacheLock.Unlock()
 	cache = make(map[string]string)
 }
 
-// CacheSize returns number of cached responses
+// CacheSize returns the number of cached responses.
 func CacheSize() int {
 	cacheLock.RLock()
 	defer cacheLock.RUnlock()

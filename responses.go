@@ -19,7 +19,7 @@ package ai
 // Built-in Tool Types
 // ═══════════════════════════════════════════════════════════════════════════
 
-// BuiltinTool represents a built-in tool for the Responses API
+// BuiltinTool represents a built-in tool for the OpenAI Responses API.
 type BuiltinTool struct {
 	Type string `json:"type"` // "web_search", "file_search", "code_interpreter", "mcp", "image_generation", "computer_use_preview", "shell", "apply_patch"
 
@@ -62,7 +62,7 @@ type BuiltinTool struct {
 	// Apply Patch options (no additional fields needed - model knows how to emit patches)
 }
 
-// UserLocation for web search geo-targeting
+// UserLocation configures geo-targeting for web search.
 type UserLocation struct {
 	Type     string `json:"type"`               // "approximate"
 	Country  string `json:"country,omitempty"`  // ISO country code (e.g., "US")
@@ -71,25 +71,25 @@ type UserLocation struct {
 	Timezone string `json:"timezone,omitempty"` // IANA timezone
 }
 
-// SearchFilter for web search domain filtering
+// SearchFilter configures domain filtering for web search.
 type SearchFilter struct {
 	AllowedDomains []string `json:"allowed_domains,omitempty"`
 }
 
-// ContainerConfig for code interpreter
+// ContainerConfig configures the code interpreter container.
 type ContainerConfig struct {
 	Type        string   `json:"type"`                   // "auto"
 	MemoryLimit string   `json:"memory_limit,omitempty"` // "1g", "4g", "16g", "64g"
 	FileIDs     []string `json:"file_ids,omitempty"`
 }
 
-// ApprovalConfig for MCP tool approval
+// ApprovalConfig configures approval rules for MCP tools.
 type ApprovalConfig struct {
 	Never  *ToolNameFilter `json:"never,omitempty"`
 	Always *ToolNameFilter `json:"always,omitempty"`
 }
 
-// ToolNameFilter for MCP allowed/approval tools
+// ToolNameFilter filters tool names for MCP allow/deny/approval rules.
 type ToolNameFilter struct {
 	ToolNames []string `json:"tool_names,omitempty"`
 }
@@ -98,7 +98,7 @@ type ToolNameFilter struct {
 // Option Types for Builder Methods
 // ═══════════════════════════════════════════════════════════════════════════
 
-// WebSearchOptions configures web search behavior
+// WebSearchOptions configures web search behavior.
 type WebSearchOptions struct {
 	// Location for geo-targeted results
 	Country  string // ISO country code (e.g., "US", "GB")
@@ -110,21 +110,21 @@ type WebSearchOptions struct {
 	AllowedDomains []string // Limit search to these domains
 }
 
-// FileSearchOptions configures file search behavior
+// FileSearchOptions configures file search behavior.
 type FileSearchOptions struct {
 	VectorStoreIDs []string // Vector store IDs to search
 	MaxNumResults  int      // Max results (default 10, max 50)
 	Filters        any      // Attribute filters for metadata
 }
 
-// CodeInterpreterOptions configures code interpreter
+// CodeInterpreterOptions configures the code interpreter tool.
 type CodeInterpreterOptions struct {
 	ContainerID string   // Existing container ID (optional)
 	MemoryLimit string   // "1g", "4g", "16g", "64g" (default "1g")
 	FileIDs     []string // Files to make available
 }
 
-// MCPOptions configures MCP server connection
+// MCPOptions configures an MCP server connection.
 type MCPOptions struct {
 	Label           string   // Unique label for this server
 	URL             string   // Server URL (for remote MCP)
@@ -135,7 +135,7 @@ type MCPOptions struct {
 	AllowedTools    []string // Limit to specific tools
 }
 
-// ImageGenerationOptions configures image generation
+// ImageGenerationOptions configures image generation.
 type ImageGenerationOptions struct {
 	Size          string // Image dimensions: "1024x1024", "1024x1536", "auto"
 	Quality       string // Rendering quality: "low", "medium", "high", "auto"
@@ -145,21 +145,21 @@ type ImageGenerationOptions struct {
 	PartialImages int    // Number of partial images for streaming (1-3)
 }
 
-// ComputerUseOptions configures computer use (CUA) tool
+// ComputerUseOptions configures computer use (CUA) tool.
 type ComputerUseOptions struct {
 	DisplayWidth  int    // Screen width in pixels (e.g., 1024)
 	DisplayHeight int    // Screen height in pixels (e.g., 768)
 	Environment   string // "browser", "mac", "windows", "ubuntu"
 }
 
-// ShellOptions configures the shell tool
-// Note: The shell tool itself requires no configuration - your code handles execution
+// ShellOptions configures the shell tool.
+// Note: the shell tool itself requires no configuration; execution is handled by your integration.
 type ShellOptions struct {
 	// No options needed - execution is handled by your integration
 }
 
-// ApplyPatchOptions configures the apply_patch tool
-// Note: The tool requires no configuration - your code handles patch application
+// ApplyPatchOptions configures the apply_patch tool.
+// Note: the tool requires no configuration; patch application is handled by your integration.
 type ApplyPatchOptions struct {
 	// No options needed - patch application is handled by your integration
 }
@@ -168,7 +168,7 @@ type ApplyPatchOptions struct {
 // Builder Methods
 // ═══════════════════════════════════════════════════════════════════════════
 
-// WebSearch enables web search for this request
+// WebSearch enables web search for this request.
 func (b *Builder) WebSearch() *Builder {
 	b.builtinTools = append(b.builtinTools, BuiltinTool{
 		Type: "web_search",
@@ -176,7 +176,7 @@ func (b *Builder) WebSearch() *Builder {
 	return b
 }
 
-// WebSearchWith enables web search with custom options
+// WebSearchWith enables web search with custom options.
 func (b *Builder) WebSearchWith(opts WebSearchOptions) *Builder {
 	tool := BuiltinTool{Type: "web_search"}
 
@@ -202,7 +202,7 @@ func (b *Builder) WebSearchWith(opts WebSearchOptions) *Builder {
 	return b
 }
 
-// FileSearch enables file search with the specified vector stores
+// FileSearch enables file search with the specified vector stores.
 func (b *Builder) FileSearch(vectorStoreIDs ...string) *Builder {
 	b.builtinTools = append(b.builtinTools, BuiltinTool{
 		Type:           "file_search",
@@ -211,7 +211,7 @@ func (b *Builder) FileSearch(vectorStoreIDs ...string) *Builder {
 	return b
 }
 
-// FileSearchWith enables file search with custom options
+// FileSearchWith enables file search with custom options.
 func (b *Builder) FileSearchWith(opts FileSearchOptions) *Builder {
 	tool := BuiltinTool{
 		Type:           "file_search",
@@ -223,7 +223,7 @@ func (b *Builder) FileSearchWith(opts FileSearchOptions) *Builder {
 	return b
 }
 
-// CodeInterpreter enables Python code execution
+// CodeInterpreter enables Python code execution.
 func (b *Builder) CodeInterpreter() *Builder {
 	b.builtinTools = append(b.builtinTools, BuiltinTool{
 		Type: "code_interpreter",
@@ -234,7 +234,7 @@ func (b *Builder) CodeInterpreter() *Builder {
 	return b
 }
 
-// CodeInterpreterWith enables code interpreter with custom options
+// CodeInterpreterWith enables code interpreter with custom options.
 func (b *Builder) CodeInterpreterWith(opts CodeInterpreterOptions) *Builder {
 	tool := BuiltinTool{Type: "code_interpreter"}
 
@@ -252,7 +252,7 @@ func (b *Builder) CodeInterpreterWith(opts CodeInterpreterOptions) *Builder {
 	return b
 }
 
-// MCP connects to a remote MCP server
+// MCP connects to a remote MCP server.
 func (b *Builder) MCP(label, url string) *Builder {
 	b.builtinTools = append(b.builtinTools, BuiltinTool{
 		Type:            "mcp",
@@ -263,7 +263,7 @@ func (b *Builder) MCP(label, url string) *Builder {
 	return b
 }
 
-// MCPWith connects to an MCP server with custom options
+// MCPWith connects to an MCP server with custom options.
 func (b *Builder) MCPWith(opts MCPOptions) *Builder {
 	tool := BuiltinTool{
 		Type:              "mcp",
@@ -285,7 +285,7 @@ func (b *Builder) MCPWith(opts MCPOptions) *Builder {
 	return b
 }
 
-// MCPConnector connects to a built-in OpenAI connector (Dropbox, Gmail, etc.)
+// MCPConnector connects to a built-in OpenAI connector (Dropbox, Gmail, etc.).
 func (b *Builder) MCPConnector(label, connectorID, authToken string) *Builder {
 	b.builtinTools = append(b.builtinTools, BuiltinTool{
 		Type:            "mcp",
@@ -438,6 +438,7 @@ func (b *Builder) ApplyPatch() *Builder {
 // Connector IDs (for MCPConnector)
 // ═══════════════════════════════════════════════════════════════════════════
 
+// Connector IDs for MCPConnector.
 const (
 	ConnectorDropbox         = "connector_dropbox"
 	ConnectorGmail           = "connector_gmail"
@@ -453,7 +454,7 @@ const (
 // Response Types (Responses API Output)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ResponsesOutput represents the parsed output from Responses API
+// ResponsesOutput represents the parsed output from the Responses API.
 type ResponsesOutput struct {
 	// Text content from the model
 	Text string
@@ -471,7 +472,7 @@ type ResponsesOutput struct {
 	OutputItems []any
 }
 
-// Citation represents a URL or file citation in the response
+// Citation represents a URL or file citation in the response.
 type Citation struct {
 	Type       string `json:"type"` // "url_citation" or "file_citation"
 	URL        string `json:"url,omitempty"`
@@ -482,13 +483,13 @@ type Citation struct {
 	EndIndex   int    `json:"end_index,omitempty"`
 }
 
-// Source represents a web source consulted
+// Source represents a web source consulted.
 type Source struct {
 	URL   string `json:"url"`
 	Title string `json:"title,omitempty"`
 }
 
-// ResponsesToolCall represents a tool call from Responses API
+// ResponsesToolCall represents a tool call from the Responses API.
 type ResponsesToolCall struct {
 	ID          string `json:"id"`
 	Type        string `json:"type"` // "web_search_call", "file_search_call", "mcp_call", "code_interpreter_call", "image_generation_call", "computer_call", "shell_call", "apply_patch_call"
@@ -521,7 +522,7 @@ type ResponsesToolCall struct {
 // Computer Use Types
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ComputerAction represents an action the model wants to perform
+// ComputerAction represents an action the model wants to perform.
 type ComputerAction struct {
 	Type string `json:"type"` // "click", "double_click", "scroll", "keypress", "type", "wait", "screenshot"
 
@@ -543,14 +544,14 @@ type ComputerAction struct {
 	Text string `json:"text,omitempty"`
 }
 
-// SafetyCheck represents a pending safety check from Computer Use
+// SafetyCheck represents a pending safety check from Computer Use.
 type SafetyCheck struct {
 	ID      string `json:"id"`
 	Code    string `json:"code"` // "malicious_instructions", "irrelevant_domain", "sensitive_domain"
 	Message string `json:"message"`
 }
 
-// ComputerCallOutput is the input you send back after executing a computer action
+// ComputerCallOutput is the input you send back after executing a computer action.
 type ComputerCallOutput struct {
 	CallID                   string        `json:"call_id"`
 	Output                   ImageInput    `json:"output"` // screenshot
@@ -562,28 +563,28 @@ type ComputerCallOutput struct {
 // Shell Types
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ShellAction represents shell commands the model wants to execute
+// ShellAction represents shell commands the model wants to execute.
 type ShellAction struct {
 	Commands        []string `json:"commands"`                    // commands to run (can be concurrent)
 	TimeoutMs       int      `json:"timeout_ms,omitempty"`        // suggested timeout
 	MaxOutputLength int      `json:"max_output_length,omitempty"` // for truncation
 }
 
-// ShellCallOutput is the input you send back after executing shell commands
+// ShellCallOutput is the input you send back after executing shell commands.
 type ShellCallOutput struct {
 	CallID          string               `json:"call_id"`
 	MaxOutputLength int                  `json:"max_output_length,omitempty"` // pass back if provided
 	Output          []ShellCommandResult `json:"output"`
 }
 
-// ShellCommandResult represents the result of a single shell command
+// ShellCommandResult represents the result of a single shell command.
 type ShellCommandResult struct {
 	Stdout  string       `json:"stdout"`
 	Stderr  string       `json:"stderr"`
 	Outcome ShellOutcome `json:"outcome"`
 }
 
-// ShellOutcome represents how a shell command completed
+// ShellOutcome represents how a shell command completed.
 type ShellOutcome struct {
 	Type     string `json:"type"` // "exit" or "timeout"
 	ExitCode int    `json:"exit_code,omitempty"`
@@ -593,14 +594,14 @@ type ShellOutcome struct {
 // Apply Patch Types
 // ═══════════════════════════════════════════════════════════════════════════
 
-// PatchOperation represents a file operation from apply_patch
+// PatchOperation represents a file operation from apply_patch.
 type PatchOperation struct {
 	Type string `json:"type"`           // "create_file", "update_file", "delete_file"
 	Path string `json:"path"`           // file path
 	Diff string `json:"diff,omitempty"` // V4A diff (for create/update)
 }
 
-// ApplyPatchCallOutput is the input you send back after applying a patch
+// ApplyPatchCallOutput is the input you send back after applying a patch.
 type ApplyPatchCallOutput struct {
 	CallID string `json:"call_id"`
 	Status string `json:"status"`           // "completed" or "failed"

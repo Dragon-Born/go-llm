@@ -12,8 +12,8 @@ import (
 // ═══════════════════════════════════════════════════════════════════════════
 
 var (
-	// PromptsDir is where prompt files are stored
-	// Change this to use a different directory
+	// PromptsDir is where prompt files are stored.
+	// Change this to use a different directory.
 	PromptsDir = "prompts"
 )
 
@@ -21,8 +21,8 @@ var (
 // Prompt Loading
 // ═══════════════════════════════════════════════════════════════════════════
 
-// LoadPrompt loads a prompt file by name (with or without extension)
-// Looks in PromptsDir (default: "prompts/")
+// LoadPrompt loads a prompt file by name (with or without extension).
+// It looks in PromptsDir (default: "prompts/").
 func LoadPrompt(name string) (string, error) {
 	// Add .md extension if not present
 	if !strings.HasSuffix(name, ".md") && !strings.HasSuffix(name, ".txt") {
@@ -38,7 +38,7 @@ func LoadPrompt(name string) (string, error) {
 	return string(data), nil
 }
 
-// MustLoadPrompt loads a prompt or panics
+// MustLoadPrompt loads a prompt or panics.
 func MustLoadPrompt(name string) string {
 	p, err := LoadPrompt(name)
 	if err != nil {
@@ -51,7 +51,7 @@ func MustLoadPrompt(name string) string {
 // Prompt Builders (use DefaultModel)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Prompt loads a prompt and returns a builder with DefaultModel
+// Prompt loads a prompt and returns a Builder with DefaultModel.
 func Prompt(name string) *Builder {
 	content, err := LoadPrompt(name)
 	if err != nil {
@@ -61,7 +61,7 @@ func Prompt(name string) *Builder {
 	return New(DefaultModel).System(content)
 }
 
-// PromptWith loads a prompt, applies variables, returns builder with DefaultModel
+// PromptWith loads a prompt, applies variables, and returns a Builder with DefaultModel.
 func PromptWith(name string, vars Vars) *Builder {
 	content, err := LoadPrompt(name)
 	if err != nil {
@@ -75,7 +75,7 @@ func PromptWith(name string, vars Vars) *Builder {
 // Prompt Builders with Model
 // ═══════════════════════════════════════════════════════════════════════════
 
-// PromptFor loads a prompt and returns a builder for the specified model
+// PromptFor loads a prompt and returns a Builder for the specified model.
 func PromptFor(name string, model Model) *Builder {
 	content, err := LoadPrompt(name)
 	if err != nil {
@@ -85,7 +85,7 @@ func PromptFor(name string, model Model) *Builder {
 	return New(model).System(content)
 }
 
-// PromptForWith loads a prompt, applies variables, for specified model
+// PromptForWith loads a prompt, applies variables, and returns a Builder for the specified model.
 func PromptForWith(name string, model Model, vars Vars) *Builder {
 	content, err := LoadPrompt(name)
 	if err != nil {
@@ -99,7 +99,7 @@ func PromptForWith(name string, model Model, vars Vars) *Builder {
 // Listing
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ListPrompts returns all available prompt names in PromptsDir
+// ListPrompts returns all available prompt names in PromptsDir.
 func ListPrompts() ([]string, error) {
 	entries, err := os.ReadDir(PromptsDir)
 	if err != nil {
@@ -122,7 +122,7 @@ func ListPrompts() ([]string, error) {
 // Template Utilities
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ApplyVars replaces {{key}} placeholders in text
+// ApplyVars replaces {{key}} placeholders in text.
 func ApplyVars(text string, vars Vars) string {
 	return applyTemplate(text, vars)
 }

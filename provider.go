@@ -11,58 +11,61 @@ import (
 // Provider Interface
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Provider represents an AI API provider (OpenAI, Anthropic, Ollama, etc.)
+// Provider defines the interface for an AI model provider (e.g., OpenAI, Anthropic).
+// It abstracts away the differences in API mechanics.
 type Provider interface {
-	// Name returns the provider identifier
+	// Name returns the unique identifier of the provider (e.g., "openai", "anthropic").
 	Name() string
 
-	// Send makes a request and returns the response
+	// Send sends a synchronous request to the provider and returns the response.
 	Send(ctx context.Context, req *ProviderRequest) (*ProviderResponse, error)
 
-	// SendStream makes a streaming request
+	// SendStream sends a streaming request to the provider.
+	// The callback is invoked for each chunk of text received.
 	SendStream(ctx context.Context, req *ProviderRequest, callback StreamCallback) (*ProviderResponse, error)
 
-	// Capabilities returns what this provider supports
+	// Capabilities returns a struct describing what features the provider supports.
 	Capabilities() ProviderCapabilities
 }
 
-// ProviderCapabilities describes what features a provider supports
+// ProviderCapabilities lists the features supported by a provider.
+// This is used to enable/disable features or warn the user.
 type ProviderCapabilities struct {
-	Tools      bool
-	Vision     bool
-	Streaming  bool
-	JSON       bool // structured output / JSON mode
-	Thinking   bool // reasoning/thinking effort
-	PDF        bool // document/PDF input support
-	Embeddings bool // embedding/vector support
-	TTS        bool // text-to-speech
-	STT        bool // speech-to-text (transcription)
+	Tools      bool // Function calling
+	Vision     bool // Image input
+	Streaming  bool // Response streaming
+	JSON       bool // Structured output / JSON mode
+	Thinking   bool // Reasoning/thinking effort
+	PDF        bool // Document/PDF input support
+	Embeddings bool // Embedding/vector support
+	TTS        bool // Text-to-speech
+	STT        bool // Speech-to-text (transcription)
 
 	// OpenAI Responses API built-in tools
-	WebSearch       bool // web search tool
-	FileSearch      bool // vector store file search
-	CodeInterpreter bool // sandboxed Python execution
-	MCP             bool // remote MCP servers / connectors
+	WebSearch       bool // Web search tool
+	FileSearch      bool // Vector store file search
+	CodeInterpreter bool // Sandboxed Python execution
+	MCP             bool // Remote MCP servers / connectors
 	ImageGeneration bool // GPT Image model integration
-	ComputerUse     bool // computer-use-preview CUA model
-	Shell           bool // shell command execution (GPT-5.1+)
-	ApplyPatch      bool // structured file editing (GPT-5.1+)
+	ComputerUse     bool // Computer-use-preview CUA model
+	Shell           bool // Shell command execution (GPT-5.1+)
+	ApplyPatch      bool // Structured file editing (GPT-5.1+)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Extended Provider Interfaces (optional capabilities)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Embedder is implemented by providers that support embeddings
+// Embedder is an interface for providers that support generating embeddings.
 type Embedder interface {
 	Embed(ctx context.Context, req *EmbeddingRequest) (*EmbeddingResponse, error)
 }
 
-// AudioProvider is implemented by providers that support TTS/STT
+// AudioProvider is an interface for providers that support audio operations (TTS/STT).
 type AudioProvider interface {
-	// TextToSpeech converts text to audio
+	// TextToSpeech converts text to audio.
 	TextToSpeech(ctx context.Context, req *TTSRequest) (*TTSResponse, error)
-	// SpeechToText transcribes audio to text
+	// SpeechToText transcribes audio to text.
 	SpeechToText(ctx context.Context, req *STTRequest) (*STTResponse, error)
 }
 
@@ -70,7 +73,7 @@ type AudioProvider interface {
 // Provider Types
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ProviderType identifies a provider
+// ProviderType represents the type of provider as a string.
 type ProviderType string
 
 const (
@@ -86,19 +89,20 @@ const (
 // Provider Configuration
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ProviderConfig holds provider-specific configuration
+// ProviderConfig holds configuration for initializing a provider.
 type ProviderConfig struct {
-	APIKey  string
-	BaseURL string
-	Headers map[string]string
-	Timeout time.Duration
+	APIKey  string            // API Key for authentication
+	BaseURL string            // Custom API endpoint (optional)
+	Headers map[string]string // Custom headers to include in requests
+	Timeout time.Duration     // Request timeout
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Provider Request/Response (provider-agnostic format)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ProviderRequest is the unified request format for all providers
+// ProviderRequest is a unified request structure used by all providers.
+// It normalizes inputs like model name, messages, and tools.
 type ProviderRequest struct {
 	Model        string
 	Messages     []Message
@@ -110,7 +114,8 @@ type ProviderRequest struct {
 	Stream       bool
 }
 
-// ProviderResponse is the unified response format from all providers
+// ProviderResponse is a unified response structure returned by all providers.
+// It normalizes outputs like content, tool calls, and token usage.
 type ProviderResponse struct {
 	Content          string
 	ToolCalls        []ToolCall
@@ -127,7 +132,7 @@ type ProviderResponse struct {
 // Provider Errors
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ProviderError wraps errors with provider context
+// ProviderError wraps an error returned by a provider, adding context.
 type ProviderError struct {
 	Provider string
 	Code     string
@@ -135,6 +140,7 @@ type ProviderError struct {
 	Err      error
 }
 
+// Error implements the error interface.
 func (e *ProviderError) Error() string {
 	if e.Code != "" {
 		return fmt.Sprintf("%s: [%s] %s", e.Provider, e.Code, e.Message)
@@ -142,6 +148,7 @@ func (e *ProviderError) Error() string {
 	return fmt.Sprintf("%s: %s", e.Provider, e.Message)
 }
 
+// Unwrap returns the underlying error.
 func (e *ProviderError) Unwrap() error {
 	return e.Err
 }

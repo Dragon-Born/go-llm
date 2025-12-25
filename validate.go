@@ -12,32 +12,36 @@ import (
 // Validator Interface
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Validator validates a response and returns an error if validation fails
+// Validator validates a response and returns an error if validation fails.
 type Validator interface {
 	Validate(content string) error
 	Name() string
 }
 
-// ValidatorFunc is a function that implements Validator
+// ValidatorFunc is an adapter to allow using a function as a Validator.
 type ValidatorFunc struct {
 	name string
 	fn   func(string) error
 }
 
+// Validate validates content using the underlying function.
 func (v ValidatorFunc) Validate(content string) error { return v.fn(content) }
-func (v ValidatorFunc) Name() string                  { return v.name }
+
+// Name returns the validator name.
+func (v ValidatorFunc) Name() string { return v.name }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Validation Error
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ValidationError is returned when validation fails
+// ValidationError is returned when validation fails.
 type ValidationError struct {
 	Validator string
 	Message   string
 	Content   string // the content that failed validation
 }
 
+// Error implements the error interface.
 func (e *ValidationError) Error() string {
 	return fmt.Sprintf("validation failed [%s]: %s", e.Validator, e.Message)
 }
@@ -46,39 +50,39 @@ func (e *ValidationError) Error() string {
 // Builder Methods for Validation
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Validate adds a custom validator
+// Validate adds a custom validator.
 func (b *Builder) Validate(v Validator) *Builder {
 	b.validators = append(b.validators, v)
 	return b
 }
 
-// ValidateWith adds a custom validation function
+// ValidateWith adds a custom validation function.
 func (b *Builder) ValidateWith(name string, fn func(string) error) *Builder {
 	b.validators = append(b.validators, ValidatorFunc{name: name, fn: fn})
 	return b
 }
 
-// MaxLength validates response length doesn't exceed limit
+// MaxLength validates that response length doesn't exceed chars.
 func (b *Builder) MaxLength(chars int) *Builder {
 	return b.Validate(&maxLengthValidator{maxChars: chars})
 }
 
-// MinLength validates response length meets minimum
+// MinLength validates that response length meets the minimum chars.
 func (b *Builder) MinLength(chars int) *Builder {
 	return b.Validate(&minLengthValidator{minChars: chars})
 }
 
-// MustContain validates response contains required substring
+// MustContain validates that response contains substr.
 func (b *Builder) MustContain(substr string) *Builder {
 	return b.Validate(&containsValidator{substr: substr, required: true})
 }
 
-// MustNotContain validates response doesn't contain substring
+// MustNotContain validates that response does not contain substr.
 func (b *Builder) MustNotContain(substr string) *Builder {
 	return b.Validate(&containsValidator{substr: substr, required: false})
 }
 
-// MustMatch validates response matches regex pattern
+// MustMatch validates that response matches the regex pattern.
 func (b *Builder) MustMatch(pattern string) *Builder {
 	re, err := regexp.Compile(pattern)
 	if err != nil {
@@ -88,7 +92,7 @@ func (b *Builder) MustMatch(pattern string) *Builder {
 	return b.Validate(&regexValidator{pattern: re, mustMatch: true})
 }
 
-// MustNotMatch validates response doesn't match regex pattern
+// MustNotMatch validates that response does not match the regex pattern.
 func (b *Builder) MustNotMatch(pattern string) *Builder {
 	re, err := regexp.Compile(pattern)
 	if err != nil {
@@ -98,22 +102,22 @@ func (b *Builder) MustNotMatch(pattern string) *Builder {
 	return b.Validate(&regexValidator{pattern: re, mustMatch: false})
 }
 
-// MustBeJSON validates response is valid JSON
+// MustBeJSON validates that response is valid JSON.
 func (b *Builder) MustBeJSON() *Builder {
 	return b.Validate(&jsonValidator{})
 }
 
-// MustBeJSONSchema validates response matches JSON schema
+// MustBeJSONSchema validates that response can be unmarshaled into schema.
 func (b *Builder) MustBeJSONSchema(schema any) *Builder {
 	return b.Validate(&jsonSchemaValidator{schema: schema})
 }
 
-// NoEmptyResponse validates response is not empty
+// NoEmptyResponse validates that response is not empty.
 func (b *Builder) NoEmptyResponse() *Builder {
 	return b.Validate(&nonEmptyValidator{})
 }
 
-// WordCount validates response word count is within range
+// WordCount validates that response word count is within [min, max].
 func (b *Builder) WordCount(min, max int) *Builder {
 	return b.Validate(&wordCountValidator{minWords: min, maxWords: max})
 }

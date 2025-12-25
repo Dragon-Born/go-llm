@@ -19,13 +19,13 @@ import (
 const anthropicBaseURL = "https://api.anthropic.com/v1"
 const anthropicAPIVersion = "2023-06-01"
 
-// AnthropicProvider implements Provider for Anthropic
+// AnthropicProvider implements Provider for Anthropic's API.
 type AnthropicProvider struct {
 	config     ProviderConfig
 	httpClient *http.Client
 }
 
-// NewAnthropicProvider creates an Anthropic provider
+// NewAnthropicProvider creates an AnthropicProvider.
 func NewAnthropicProvider(config ProviderConfig) *AnthropicProvider {
 	if config.BaseURL == "" {
 		config.BaseURL = anthropicBaseURL
@@ -40,10 +40,12 @@ func NewAnthropicProvider(config ProviderConfig) *AnthropicProvider {
 	return &AnthropicProvider{config: config, httpClient: client}
 }
 
+// Name returns the provider identifier ("anthropic").
 func (p *AnthropicProvider) Name() string {
 	return "anthropic"
 }
 
+// Capabilities reports the features supported by this provider implementation.
 func (p *AnthropicProvider) Capabilities() ProviderCapabilities {
 	return ProviderCapabilities{
 		Tools:     true,
@@ -59,6 +61,7 @@ func (p *AnthropicProvider) Capabilities() ProviderCapabilities {
 // Send
 // ═══════════════════════════════════════════════════════════════════════════
 
+// Send executes a non-streaming request.
 func (p *AnthropicProvider) Send(ctx context.Context, req *ProviderRequest) (*ProviderResponse, error) {
 	if p.config.APIKey == "" {
 		return nil, &ProviderError{
@@ -103,6 +106,7 @@ func (p *AnthropicProvider) Send(ctx context.Context, req *ProviderRequest) (*Pr
 // SendStream
 // ═══════════════════════════════════════════════════════════════════════════
 
+// SendStream executes a streaming request and invokes callback for each chunk.
 func (p *AnthropicProvider) SendStream(ctx context.Context, req *ProviderRequest, callback StreamCallback) (*ProviderResponse, error) {
 	if p.config.APIKey == "" {
 		return nil, &ProviderError{

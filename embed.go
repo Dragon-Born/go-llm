@@ -10,7 +10,7 @@ import (
 // Embedding Models
 // ═══════════════════════════════════════════════════════════════════════════
 
-// EmbeddingModel represents an embedding model
+// EmbeddingModel represents an embedding model identifier.
 type EmbeddingModel string
 
 const (
@@ -30,21 +30,21 @@ const (
 	EmbedSnowflake EmbeddingModel = "snowflake-arctic-embed"
 )
 
-// Default embedding model
+// DefaultEmbeddingModel is the default embedding model used by Embed and EmbedMany.
 var DefaultEmbeddingModel = EmbedTextSmall3
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Embedding Request/Response
 // ═══════════════════════════════════════════════════════════════════════════
 
-// EmbeddingRequest is the unified request format for embeddings
+// EmbeddingRequest is a provider-agnostic request format for embeddings.
 type EmbeddingRequest struct {
 	Model      string
 	Input      []string // texts to embed
 	Dimensions int      // optional: for models that support dimension reduction
 }
 
-// EmbeddingResponse is the unified response format
+// EmbeddingResponse is a provider-agnostic response format for embeddings.
 type EmbeddingResponse struct {
 	Embeddings  [][]float64 // embedding vectors
 	Model       string
@@ -56,7 +56,7 @@ type EmbeddingResponse struct {
 // Embedding Builder - Fluent API
 // ═══════════════════════════════════════════════════════════════════════════
 
-// EmbedBuilder provides a fluent API for creating embeddings
+// EmbedBuilder provides a fluent API for creating embeddings.
 type EmbedBuilder struct {
 	model      EmbeddingModel
 	texts      []string
@@ -65,7 +65,7 @@ type EmbedBuilder struct {
 	ctx        context.Context
 }
 
-// Embed creates a new embedding builder with a single text
+// Embed creates a new EmbedBuilder for a single text.
 func Embed(text string) *EmbedBuilder {
 	return &EmbedBuilder{
 		model: DefaultEmbeddingModel,
@@ -73,7 +73,7 @@ func Embed(text string) *EmbedBuilder {
 	}
 }
 
-// EmbedMany creates embeddings for multiple texts
+// EmbedMany creates a new EmbedBuilder for multiple texts.
 func EmbedMany(texts ...string) *EmbedBuilder {
 	return &EmbedBuilder{
 		model: DefaultEmbeddingModel,
@@ -81,31 +81,31 @@ func EmbedMany(texts ...string) *EmbedBuilder {
 	}
 }
 
-// Model sets the embedding model
+// Model sets the embedding model.
 func (e *EmbedBuilder) Model(model EmbeddingModel) *EmbedBuilder {
 	e.model = model
 	return e
 }
 
-// Dimensions sets the output dimensions (for models that support it)
+// Dimensions sets the output dimensions (for models that support it).
 func (e *EmbedBuilder) Dimensions(d int) *EmbedBuilder {
 	e.dimensions = d
 	return e
 }
 
-// WithClient sets a specific client/provider
+// WithClient sets a specific client/provider to execute the request with.
 func (e *EmbedBuilder) WithClient(client *Client) *EmbedBuilder {
 	e.client = client
 	return e
 }
 
-// WithContext sets a context for cancellation
+// WithContext sets a context for cancellation.
 func (e *EmbedBuilder) WithContext(ctx context.Context) *EmbedBuilder {
 	e.ctx = ctx
 	return e
 }
 
-// Add appends more texts to embed
+// Add appends more texts to embed.
 func (e *EmbedBuilder) Add(texts ...string) *EmbedBuilder {
 	e.texts = append(e.texts, texts...)
 	return e
@@ -115,7 +115,7 @@ func (e *EmbedBuilder) Add(texts ...string) *EmbedBuilder {
 // Execution
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Do executes the embedding request and returns all vectors
+// Do executes the embedding request and returns all vectors.
 func (e *EmbedBuilder) Do() ([][]float64, error) {
 	resp, err := e.DoWithMeta()
 	if err != nil {
@@ -124,7 +124,7 @@ func (e *EmbedBuilder) Do() ([][]float64, error) {
 	return resp.Embeddings, nil
 }
 
-// DoWithMeta executes and returns full response with metadata
+// DoWithMeta executes the request and returns the full response with metadata.
 func (e *EmbedBuilder) DoWithMeta() (*EmbeddingResponse, error) {
 	client := e.client
 	if client == nil {
@@ -166,7 +166,7 @@ func (e *EmbedBuilder) DoWithMeta() (*EmbeddingResponse, error) {
 	return resp, nil
 }
 
-// First returns just the first embedding vector (convenience for single text)
+// First returns the first embedding vector (convenience for single-text usage).
 func (e *EmbedBuilder) First() ([]float64, error) {
 	results, err := e.Do()
 	if err != nil {
@@ -182,12 +182,12 @@ func (e *EmbedBuilder) First() ([]float64, error) {
 // Provider-Specific Shortcuts
 // ═══════════════════════════════════════════════════════════════════════════
 
-// EmbedWith creates an embedding builder using a specific provider's client
+// Embed creates an EmbedBuilder bound to this client.
 func (c *Client) Embed(text string) *EmbedBuilder {
 	return Embed(text).WithClient(c)
 }
 
-// EmbedMany creates embeddings for multiple texts using a specific provider
+// EmbedMany creates an EmbedBuilder bound to this client for multiple texts.
 func (c *Client) EmbedMany(texts ...string) *EmbedBuilder {
 	return EmbedMany(texts...).WithClient(c)
 }
@@ -196,7 +196,7 @@ func (c *Client) EmbedMany(texts ...string) *EmbedBuilder {
 // Similarity Functions
 // ═══════════════════════════════════════════════════════════════════════════
 
-// CosineSimilarity calculates cosine similarity between two vectors
+// CosineSimilarity calculates cosine similarity between two vectors.
 func CosineSimilarity(a, b []float64) float64 {
 	if len(a) != len(b) {
 		return 0
@@ -216,7 +216,7 @@ func CosineSimilarity(a, b []float64) float64 {
 	return dotProduct / (sqrt(normA) * sqrt(normB))
 }
 
-// DotProduct calculates dot product between two vectors
+// DotProduct calculates the dot product between two vectors.
 func DotProduct(a, b []float64) float64 {
 	if len(a) != len(b) {
 		return 0
@@ -229,7 +229,7 @@ func DotProduct(a, b []float64) float64 {
 	return result
 }
 
-// EuclideanDistance calculates Euclidean distance between two vectors
+// EuclideanDistance calculates Euclidean distance between two vectors.
 func EuclideanDistance(a, b []float64) float64 {
 	if len(a) != len(b) {
 		return 0

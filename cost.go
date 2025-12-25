@@ -9,13 +9,13 @@ import (
 // Cost Tracking
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ModelPricing contains pricing per 1M tokens for a model
+// ModelPricing contains pricing per 1M tokens for a model.
 type ModelPricing struct {
 	InputPerMillion  float64 // USD per 1M input tokens
 	OutputPerMillion float64 // USD per 1M output tokens
 }
 
-// ModelPricingMap maps models to their pricing
+// ModelPricingMap maps models to their pricing.
 var ModelPricingMap = map[Model]ModelPricing{
 	// OpenAI Models
 	// Prices per 1M tokens (input/output) from OpenAI pricing table provided by user.
@@ -130,7 +130,7 @@ var ModelPricingMap = map[Model]ModelPricing{
 	ModelMistralLarge: {2.00, 6.00},
 }
 
-// EmbeddingPricingMap maps embedding models to their pricing (per 1M tokens)
+// EmbeddingPricingMap maps embedding models to their pricing (per 1M tokens).
 var EmbeddingPricingMap = map[EmbeddingModel]float64{
 	EmbedTextSmall3:  0.02,
 	EmbedTextLarge3:  0.13,
@@ -139,7 +139,7 @@ var EmbeddingPricingMap = map[EmbeddingModel]float64{
 	EmbedGeckoLatest: 0.0001,
 }
 
-// AudioPricingMap maps audio models to their pricing (per minute or per 1M chars)
+// AudioPricingMap maps audio models to their pricing (per minute or per 1M chars).
 var AudioPricingMap = map[string]float64{
 	// TTS pricing per 1M characters
 	string(TTSTTS1):   15.00,
@@ -152,7 +152,7 @@ var AudioPricingMap = map[string]float64{
 // Cost Calculation
 // ═══════════════════════════════════════════════════════════════════════════
 
-// CalculateCost calculates the cost for a request
+// CalculateCost calculates the estimated cost for a request in USD.
 func CalculateCost(model Model, promptTokens, completionTokens int) float64 {
 	pricing, ok := ModelPricingMap[model]
 	if !ok {
@@ -166,7 +166,7 @@ func CalculateCost(model Model, promptTokens, completionTokens int) float64 {
 	return inputCost + outputCost
 }
 
-// CalculateEmbeddingCost calculates embedding cost
+// CalculateEmbeddingCost calculates estimated embedding cost in USD.
 func CalculateEmbeddingCost(model EmbeddingModel, tokens int) float64 {
 	pricing, ok := EmbeddingPricingMap[model]
 	if !ok {
@@ -175,7 +175,7 @@ func CalculateEmbeddingCost(model EmbeddingModel, tokens int) float64 {
 	return float64(tokens) / 1_000_000 * pricing
 }
 
-// CalculateTTSCost calculates text-to-speech cost (per character)
+// CalculateTTSCost calculates estimated text-to-speech cost in USD (per character).
 func CalculateTTSCost(model TTSModel, characters int) float64 {
 	pricing, ok := AudioPricingMap[string(model)]
 	if !ok {
@@ -184,7 +184,7 @@ func CalculateTTSCost(model TTSModel, characters int) float64 {
 	return float64(characters) / 1_000_000 * pricing
 }
 
-// CalculateSTTCost calculates speech-to-text cost (per minute)
+// CalculateSTTCost calculates estimated speech-to-text cost in USD (per minute).
 func CalculateSTTCost(model STTModel, durationSeconds float64) float64 {
 	pricing, ok := AudioPricingMap[string(model)]
 	if !ok {
@@ -197,12 +197,12 @@ func CalculateSTTCost(model STTModel, durationSeconds float64) float64 {
 // Cost in ResponseMeta
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Cost returns the estimated cost for this response in USD
+// Cost returns the estimated cost for this response in USD.
 func (m *ResponseMeta) Cost() float64 {
 	return CalculateCost(m.Model, m.PromptTokens, m.CompletionTokens)
 }
 
-// CostString returns formatted cost string
+// CostString returns a formatted USD cost string.
 func (m *ResponseMeta) CostString() string {
 	cost := m.Cost()
 	if cost < 0.01 {
@@ -215,7 +215,7 @@ func (m *ResponseMeta) CostString() string {
 // Cost Tracker - Accumulated Costs
 // ═══════════════════════════════════════════════════════════════════════════
 
-// CostTracker tracks accumulated costs
+// CostTracker tracks accumulated costs across many responses.
 type CostTracker struct {
 	mu           sync.Mutex
 	TotalCost    float64
@@ -224,14 +224,14 @@ type CostTracker struct {
 	CostByModel  map[Model]float64
 }
 
-// NewCostTracker creates a new cost tracker
+// NewCostTracker creates a new CostTracker.
 func NewCostTracker() *CostTracker {
 	return &CostTracker{
 		CostByModel: make(map[Model]float64),
 	}
 }
 
-// Track records a response's cost
+// Track records a response's cost.
 func (ct *CostTracker) Track(meta *ResponseMeta) {
 	ct.mu.Lock()
 	defer ct.mu.Unlock()
@@ -243,7 +243,7 @@ func (ct *CostTracker) Track(meta *ResponseMeta) {
 	ct.CostByModel[meta.Model] += cost
 }
 
-// Reset clears all tracked costs
+// Reset clears all tracked costs.
 func (ct *CostTracker) Reset() {
 	ct.mu.Lock()
 	defer ct.mu.Unlock()
@@ -254,7 +254,7 @@ func (ct *CostTracker) Reset() {
 	ct.CostByModel = make(map[Model]float64)
 }
 
-// Summary returns a formatted cost summary
+// Summary returns a formatted cost summary.
 func (ct *CostTracker) Summary() string {
 	ct.mu.Lock()
 	defer ct.mu.Unlock()
@@ -282,7 +282,7 @@ Cost by Model:`,
 	return summary
 }
 
-// Print prints the cost summary
+// Print prints the cost summary to stdout.
 func (ct *CostTracker) Print() {
 	fmt.Println(ct.Summary())
 }
@@ -296,7 +296,7 @@ var (
 	globalCostTrackerLock sync.Mutex
 )
 
-// EnableCostTracking enables global cost tracking
+// EnableCostTracking enables package-level cost tracking (opt-in).
 func EnableCostTracking() {
 	globalCostTrackerLock.Lock()
 	defer globalCostTrackerLock.Unlock()
@@ -306,7 +306,7 @@ func EnableCostTracking() {
 	}
 }
 
-// GetCostTracker returns the global cost tracker
+// GetCostTracker returns the package-level cost tracker (creating one if needed).
 func GetCostTracker() *CostTracker {
 	globalCostTrackerLock.Lock()
 	defer globalCostTrackerLock.Unlock()
@@ -317,12 +317,12 @@ func GetCostTracker() *CostTracker {
 	return globalCostTracker
 }
 
-// TotalCost returns the total cost tracked globally
+// TotalCost returns the total cost tracked by the package-level tracker.
 func TotalCost() float64 {
 	return GetCostTracker().TotalCost
 }
 
-// PrintCostSummary prints the global cost summary
+// PrintCostSummary prints the package-level cost summary.
 func PrintCostSummary() {
 	GetCostTracker().Print()
 }
@@ -331,7 +331,7 @@ func PrintCostSummary() {
 // Cost-Aware Helpers
 // ═══════════════════════════════════════════════════════════════════════════
 
-// EstimatePromptCost estimates cost before sending
+// EstimatePromptCost estimates prompt cost in USD before sending, using a rough token heuristic.
 func EstimatePromptCost(model Model, promptChars int) float64 {
 	// Rough token estimate: 1 token ≈ 4 characters
 	estimatedTokens := promptChars / 4
@@ -342,7 +342,7 @@ func EstimatePromptCost(model Model, promptChars int) float64 {
 	return float64(estimatedTokens) / 1_000_000 * inputPerMillion
 }
 
-// CheapestModel returns the cheapest model from a list for a given task
+// CheapestModel returns the cheapest model (by average in/out pricing) from a list.
 func CheapestModel(models ...Model) Model {
 	if len(models) == 0 {
 		return ModelGPT4oMini // default cheap model
@@ -366,7 +366,7 @@ func CheapestModel(models ...Model) Model {
 	return cheapest
 }
 
-// MostExpensiveModel returns the most expensive (usually highest quality) model
+// MostExpensiveModel returns the most expensive model (by average in/out pricing) from a list.
 func MostExpensiveModel(models ...Model) Model {
 	if len(models) == 0 {
 		return ModelClaudeOpus // default high-end model
@@ -394,17 +394,18 @@ func MostExpensiveModel(models ...Model) Model {
 // Budget Controls
 // ═══════════════════════════════════════════════════════════════════════════
 
-// BudgetExceededError is returned when budget is exceeded
+// BudgetExceededError is returned when budget is exceeded.
 type BudgetExceededError struct {
 	Budget  float64
 	Current float64
 }
 
+// Error implements the error interface.
 func (e *BudgetExceededError) Error() string {
 	return fmt.Sprintf("budget exceeded: current $%.4f >= budget $%.4f", e.Current, e.Budget)
 }
 
-// WithBudget creates a cost tracker with a budget limit
+// WithBudget creates a BudgetTracker with a budget limit.
 func WithBudget(maxCost float64) *BudgetTracker {
 	return &BudgetTracker{
 		CostTracker: NewCostTracker(),
@@ -412,13 +413,13 @@ func WithBudget(maxCost float64) *BudgetTracker {
 	}
 }
 
-// BudgetTracker is a cost tracker with budget enforcement
+// BudgetTracker is a CostTracker with a budget limit.
 type BudgetTracker struct {
 	*CostTracker
 	Budget float64
 }
 
-// CheckBudget returns error if budget would be exceeded
+// CheckBudget returns an error if the budget is exceeded.
 func (bt *BudgetTracker) CheckBudget() error {
 	if bt.TotalCost >= bt.Budget {
 		return &BudgetExceededError{Budget: bt.Budget, Current: bt.TotalCost}
@@ -426,7 +427,7 @@ func (bt *BudgetTracker) CheckBudget() error {
 	return nil
 }
 
-// Remaining returns remaining budget
+// Remaining returns remaining budget in USD.
 func (bt *BudgetTracker) Remaining() float64 {
 	remaining := bt.Budget - bt.TotalCost
 	if remaining < 0 {
@@ -435,7 +436,7 @@ func (bt *BudgetTracker) Remaining() float64 {
 	return remaining
 }
 
-// RemainingString returns formatted remaining budget
+// RemainingString returns a formatted remaining budget string.
 func (bt *BudgetTracker) RemainingString() string {
 	return fmt.Sprintf("$%.4f remaining of $%.4f budget", bt.Remaining(), bt.Budget)
 }

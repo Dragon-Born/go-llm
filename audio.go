@@ -10,7 +10,7 @@ import (
 // Audio Models
 // ═══════════════════════════════════════════════════════════════════════════
 
-// TTSModel represents a text-to-speech model
+// TTSModel represents a text-to-speech model identifier.
 type TTSModel string
 
 const (
@@ -23,7 +23,7 @@ const (
 	TTSGemini TTSModel = "gemini-2.5-flash-preview-tts"
 )
 
-// STTModel represents a speech-to-text model
+// STTModel represents a speech-to-text model identifier.
 type STTModel string
 
 const (
@@ -35,7 +35,7 @@ const (
 	STTGemini STTModel = "gemini-2.5-flash-preview-stt"
 )
 
-// Voice represents a TTS voice
+// Voice represents a TTS voice identifier.
 type Voice string
 
 const (
@@ -53,7 +53,7 @@ const (
 	VoiceVerse   Voice = "verse"
 )
 
-// AudioFormat represents the output audio format
+// AudioFormat represents the output audio format.
 type AudioFormat string
 
 const (
@@ -65,7 +65,10 @@ const (
 	AudioFormatPCM  AudioFormat = "pcm"
 )
 
-// Default audio settings
+// DefaultTTSModel is the default text-to-speech model used by Speak.
+// DefaultSTTModel is the default speech-to-text model used by Transcribe.
+// DefaultVoice is the default voice used by Speak.
+// DefaultAudioFormat is the default audio format used by Speak.
 var (
 	DefaultTTSModel    = TTSTTS1
 	DefaultSTTModel    = STTWhisper1
@@ -77,7 +80,7 @@ var (
 // TTS Request/Response
 // ═══════════════════════════════════════════════════════════════════════════
 
-// TTSRequest is the request for text-to-speech
+// TTSRequest is a provider-agnostic request for text-to-speech.
 type TTSRequest struct {
 	Model  string
 	Input  string  // text to speak
@@ -86,7 +89,7 @@ type TTSRequest struct {
 	Speed  float64 // 0.25 to 4.0 (1.0 is default)
 }
 
-// TTSResponse is the response from text-to-speech
+// TTSResponse is a provider-agnostic response from text-to-speech.
 type TTSResponse struct {
 	Audio       []byte // raw audio data
 	Format      string
@@ -97,7 +100,7 @@ type TTSResponse struct {
 // STT Request/Response
 // ═══════════════════════════════════════════════════════════════════════════
 
-// STTRequest is the request for speech-to-text
+// STTRequest is a provider-agnostic request for speech-to-text.
 type STTRequest struct {
 	Model       string
 	Audio       []byte // audio data
@@ -109,7 +112,7 @@ type STTRequest struct {
 	Timestamps  bool // include word-level timestamps
 }
 
-// STTResponse is the response from speech-to-text
+// STTResponse is a provider-agnostic response from speech-to-text.
 type STTResponse struct {
 	Text     string
 	Language string
@@ -117,7 +120,7 @@ type STTResponse struct {
 	Words    []WordTimestamp
 }
 
-// WordTimestamp represents a word with timing info
+// WordTimestamp represents a word with timing information.
 type WordTimestamp struct {
 	Word  string
 	Start float64 // seconds
@@ -128,7 +131,7 @@ type WordTimestamp struct {
 // TTS Builder - Fluent API
 // ═══════════════════════════════════════════════════════════════════════════
 
-// TTSBuilder provides a fluent API for text-to-speech
+// TTSBuilder provides a fluent API for text-to-speech.
 type TTSBuilder struct {
 	model  TTSModel
 	text   string
@@ -139,7 +142,7 @@ type TTSBuilder struct {
 	ctx    context.Context
 }
 
-// Speak creates a new TTS builder
+// Speak creates a new TTSBuilder.
 func Speak(text string) *TTSBuilder {
 	return &TTSBuilder{
 		model:  DefaultTTSModel,
@@ -150,25 +153,25 @@ func Speak(text string) *TTSBuilder {
 	}
 }
 
-// Model sets the TTS model
+// Model sets the TTS model.
 func (t *TTSBuilder) Model(model TTSModel) *TTSBuilder {
 	t.model = model
 	return t
 }
 
-// Voice sets the voice
+// Voice sets the voice.
 func (t *TTSBuilder) Voice(voice Voice) *TTSBuilder {
 	t.voice = voice
 	return t
 }
 
-// Format sets the output audio format
+// Format sets the output audio format.
 func (t *TTSBuilder) Format(format AudioFormat) *TTSBuilder {
 	t.format = format
 	return t
 }
 
-// Speed sets the speech speed (0.25 to 4.0)
+// Speed sets the speech speed (0.25 to 4.0).
 func (t *TTSBuilder) Speed(speed float64) *TTSBuilder {
 	if speed < 0.25 {
 		speed = 0.25
@@ -180,19 +183,19 @@ func (t *TTSBuilder) Speed(speed float64) *TTSBuilder {
 	return t
 }
 
-// HD uses the high-definition TTS model
+// HD switches to the high-definition TTS model.
 func (t *TTSBuilder) HD() *TTSBuilder {
 	t.model = TTSTTS1HD
 	return t
 }
 
-// WithClient sets a specific client/provider
+// WithClient sets a specific client/provider to execute the request with.
 func (t *TTSBuilder) WithClient(client *Client) *TTSBuilder {
 	t.client = client
 	return t
 }
 
-// WithContext sets a context for cancellation
+// WithContext sets a context for cancellation.
 func (t *TTSBuilder) WithContext(ctx context.Context) *TTSBuilder {
 	t.ctx = ctx
 	return t
@@ -202,7 +205,7 @@ func (t *TTSBuilder) WithContext(ctx context.Context) *TTSBuilder {
 // TTS Execution
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Do generates the audio and returns raw bytes
+// Do generates audio and returns raw bytes.
 func (t *TTSBuilder) Do() ([]byte, error) {
 	resp, err := t.DoWithMeta()
 	if err != nil {
@@ -211,7 +214,7 @@ func (t *TTSBuilder) Do() ([]byte, error) {
 	return resp.Audio, nil
 }
 
-// DoWithMeta generates audio and returns full response
+// DoWithMeta generates audio and returns the full response.
 func (t *TTSBuilder) DoWithMeta() (*TTSResponse, error) {
 	client := t.client
 	if client == nil {
@@ -255,7 +258,7 @@ func (t *TTSBuilder) DoWithMeta() (*TTSResponse, error) {
 	return resp, nil
 }
 
-// Save generates audio and saves to file
+// Save generates audio and saves it to a file.
 func (t *TTSBuilder) Save(path string) error {
 	audio, err := t.Do()
 	if err != nil {

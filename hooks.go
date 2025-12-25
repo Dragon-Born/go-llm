@@ -10,7 +10,7 @@ import (
 // Hooks / Middleware / Callbacks
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Hook types for different events
+// Hook types for different request lifecycle events.
 type (
 	BeforeRequestHook func(model Model, messages []Message)
 	AfterResponseHook func(model Model, content string, duration time.Duration)
@@ -18,7 +18,7 @@ type (
 	OnTokensHook      func(model Model, prompt, completion int)
 )
 
-// Global hooks (can be set by users for observability)
+// Global hooks (can be set by users for observability).
 var (
 	hooksLock sync.RWMutex
 
@@ -32,35 +32,35 @@ var (
 // Hook Registration
 // ═══════════════════════════════════════════════════════════════════════════
 
-// OnBeforeRequest registers a hook called before each request
+// OnBeforeRequest registers a hook called before each request.
 func OnBeforeRequest(hook BeforeRequestHook) {
 	hooksLock.Lock()
 	defer hooksLock.Unlock()
 	beforeRequestHooks = append(beforeRequestHooks, hook)
 }
 
-// OnAfterResponse registers a hook called after each successful response
+// OnAfterResponse registers a hook called after each successful response.
 func OnAfterResponse(hook AfterResponseHook) {
 	hooksLock.Lock()
 	defer hooksLock.Unlock()
 	afterResponseHooks = append(afterResponseHooks, hook)
 }
 
-// OnError registers a hook called on errors
+// OnError registers a hook called on errors.
 func OnError(hook OnErrorHook) {
 	hooksLock.Lock()
 	defer hooksLock.Unlock()
 	onErrorHooks = append(onErrorHooks, hook)
 }
 
-// OnTokens registers a hook called with token counts
+// OnTokens registers a hook called with token counts.
 func OnTokens(hook OnTokensHook) {
 	hooksLock.Lock()
 	defer hooksLock.Unlock()
 	onTokensHooks = append(onTokensHooks, hook)
 }
 
-// ClearHooks removes all registered hooks
+// ClearHooks removes all registered hooks.
 func ClearHooks() {
 	hooksLock.Lock()
 	defer hooksLock.Unlock()
@@ -118,7 +118,7 @@ func invokeOnTokens(model Model, prompt, completion int) {
 // Common Hook Examples (optional utilities)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// LoggingHooks returns common logging hooks
+// LoggingHooks returns common logging hooks (before, after, onError).
 func LoggingHooks() (BeforeRequestHook, AfterResponseHook, OnErrorHook) {
 	before := func(model Model, messages []Message) {
 		printDebugRequest(model, messages)
@@ -135,7 +135,7 @@ func LoggingHooks() (BeforeRequestHook, AfterResponseHook, OnErrorHook) {
 	return before, after, onErr
 }
 
-// MetricsCollector is an example hook for collecting metrics
+// MetricsCollector is a simple metrics helper that can be registered as hooks.
 type MetricsCollector struct {
 	mu            sync.Mutex
 	RequestCount  int
@@ -145,14 +145,14 @@ type MetricsCollector struct {
 	ModelCounts   map[Model]int
 }
 
-// NewMetricsCollector creates a new metrics collector
+// NewMetricsCollector creates a new MetricsCollector.
 func NewMetricsCollector() *MetricsCollector {
 	return &MetricsCollector{
 		ModelCounts: make(map[Model]int),
 	}
 }
 
-// Hook returns the after-response hook for this collector
+// Hook returns the after-response hook for this collector.
 func (m *MetricsCollector) Hook() AfterResponseHook {
 	return func(model Model, content string, duration time.Duration) {
 		m.mu.Lock()
@@ -163,7 +163,7 @@ func (m *MetricsCollector) Hook() AfterResponseHook {
 	}
 }
 
-// TokenHook returns the tokens hook for this collector
+// TokenHook returns the tokens hook for this collector.
 func (m *MetricsCollector) TokenHook() OnTokensHook {
 	return func(model Model, prompt, completion int) {
 		m.mu.Lock()
@@ -172,7 +172,7 @@ func (m *MetricsCollector) TokenHook() OnTokensHook {
 	}
 }
 
-// ErrorHook returns the error hook for this collector
+// ErrorHook returns the error hook for this collector.
 func (m *MetricsCollector) ErrorHook() OnErrorHook {
 	return func(model Model, err error) {
 		m.mu.Lock()
@@ -181,7 +181,7 @@ func (m *MetricsCollector) ErrorHook() OnErrorHook {
 	}
 }
 
-// Register registers all hooks for this collector
+// Register registers all hooks for this collector.
 func (m *MetricsCollector) Register() {
 	OnAfterResponse(m.Hook())
 	OnTokens(m.TokenHook())

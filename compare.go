@@ -5,14 +5,14 @@ import (
 	"sync"
 )
 
-// CompareBuilder helps compare responses across multiple models
+// CompareBuilder helps compare responses across multiple models.
 type CompareBuilder struct {
 	system string
 	prompt string
 	vars   Vars
 }
 
-// Compare starts a comparison builder
+// Compare starts a comparison builder.
 func Compare(prompt string) *CompareBuilder {
 	return &CompareBuilder{
 		prompt: prompt,
@@ -20,20 +20,20 @@ func Compare(prompt string) *CompareBuilder {
 	}
 }
 
-// System sets a system prompt for comparison
+// System sets a system prompt for comparison.
 func (c *CompareBuilder) System(system string) *CompareBuilder {
 	c.system = system
 	return c
 }
 
-// SystemFile loads system prompt from file
+// SystemFile loads a system prompt from a file.
 func (c *CompareBuilder) SystemFile(path string) *CompareBuilder {
 	b := New(ModelGPT5).SystemFile(path)
 	c.system = b.system
 	return c
 }
 
-// With adds template variables
+// With adds template variables.
 func (c *CompareBuilder) With(vars Vars) *CompareBuilder {
 	for k, v := range vars {
 		c.vars[k] = v
@@ -41,7 +41,7 @@ func (c *CompareBuilder) With(vars Vars) *CompareBuilder {
 	return c
 }
 
-// CompareResult holds a single model's response
+// CompareResult holds a single model's response.
 type CompareResult struct {
 	Model    Model
 	Response string
@@ -49,7 +49,7 @@ type CompareResult struct {
 	Tokens   int
 }
 
-// On runs the comparison across specified models
+// On runs the comparison across specified models.
 func (c *CompareBuilder) On(models ...Model) []CompareResult {
 	results := make([]CompareResult, len(models))
 	var wg sync.WaitGroup
@@ -117,19 +117,22 @@ func (c *CompareBuilder) On(models ...Model) []CompareResult {
 	return results
 }
 
-// Quick comparison shortcuts
+// AllGPT compares a small set of common GPT models.
 func (c *CompareBuilder) AllGPT() []CompareResult {
 	return c.On(ModelGPT5, ModelGPT4o, ModelO1)
 }
 
+// AllClaude compares the default Claude lineup.
 func (c *CompareBuilder) AllClaude() []CompareResult {
 	return c.On(ModelClaudeOpus, ModelClaudeSonnet, ModelClaudeHaiku)
 }
 
+// TopModels compares a few popular high-quality models across providers.
 func (c *CompareBuilder) TopModels() []CompareResult {
 	return c.On(ModelGPT5, ModelClaudeOpus, ModelGemini3Flash, ModelGrok3)
 }
 
+// FastModels compares a few low-latency / cost-efficient models across providers.
 func (c *CompareBuilder) FastModels() []CompareResult {
 	return c.On(ModelGPT4oMini, ModelClaudeHaiku, ModelGemini2Flash, ModelGrok3Mini)
 }

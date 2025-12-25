@@ -11,13 +11,15 @@ import (
 // Client - Multi-Provider Client
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Client wraps a Provider and creates builders for it
+// Client wraps a Provider and manages the creation of builders.
+// It serves as the entry point for interacting with a specific AI provider.
 type Client struct {
 	provider     Provider
 	providerType ProviderType
 }
 
-// NewClient creates a client for a specific provider
+// NewClient creates a new Client for the specified provider type.
+// It accepts optional configuration options like API key, base URL, etc.
 func NewClient(providerType ProviderType, opts ...ClientOption) *Client {
 	config := ProviderConfig{}
 	for _, opt := range opts {
@@ -48,7 +50,8 @@ func NewClient(providerType ProviderType, opts ...ClientOption) *Client {
 	}
 }
 
-// NewClientWithProvider creates a client with a custom provider implementation
+// NewClientWithProvider creates a client using a custom provider implementation.
+// Useful for testing or adding new providers without modifying the package.
 func NewClientWithProvider(provider Provider) *Client {
 	return &Client{
 		provider:     provider,
@@ -56,7 +59,7 @@ func NewClientWithProvider(provider Provider) *Client {
 	}
 }
 
-// Provider returns the underlying provider
+// Provider returns the underlying provider interface.
 func (c *Client) Provider() Provider {
 	return c.provider
 }
@@ -65,31 +68,32 @@ func (c *Client) Provider() Provider {
 // Client Options (functional options pattern)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ClientOption configures a client
+// ClientOption defines a function for configuring a provider.
 type ClientOption func(*ProviderConfig)
 
-// WithAPIKey sets the API key
+// WithAPIKey sets the API key for the provider.
 func WithAPIKey(key string) ClientOption {
 	return func(c *ProviderConfig) {
 		c.APIKey = key
 	}
 }
 
-// WithBaseURL sets a custom base URL
+// WithBaseURL sets a custom base URL for the API.
+// Useful for proxies or enterprise endpoints.
 func WithBaseURL(url string) ClientOption {
 	return func(c *ProviderConfig) {
 		c.BaseURL = url
 	}
 }
 
-// WithTimeout sets the request timeout
+// WithTimeout sets the request timeout duration.
 func WithTimeout(d time.Duration) ClientOption {
 	return func(c *ProviderConfig) {
 		c.Timeout = d
 	}
 }
 
-// WithHeaders sets custom headers
+// WithHeaders sets custom HTTP headers for requests.
 func WithHeaders(headers map[string]string) ClientOption {
 	return func(c *ProviderConfig) {
 		c.Headers = headers
@@ -100,14 +104,16 @@ func WithHeaders(headers map[string]string) ClientOption {
 // Model Shortcuts on Client
 // ═══════════════════════════════════════════════════════════════════════════
 
-// New creates a builder for any model on this client
+// New creates a new Builder instance associated with this client.
+// All requests made by this builder will use the client's provider.
 func (c *Client) New(model Model) *Builder {
 	b := New(model)
 	b.client = c
 	return b
 }
 
-// Use creates a builder for a model by string ID (for Ollama, custom models)
+// Use creates a builder for a model by its string ID.
+// Useful for models not defined in the package constants (e.g., custom Ollama models).
 func (c *Client) Use(modelID string) *Builder {
 	return c.New(Model(modelID))
 }
@@ -116,165 +122,335 @@ func (c *Client) Use(modelID string) *Builder {
 // OpenAI Model Shortcuts
 // ═══════════════════════════════════════════════════════════════════════════
 
-func (c *Client) GPT5() *Builder      { return c.New(ModelGPT5) }      // alias of GPT-5.2
-func (c *Client) GPT5Codex() *Builder { return c.New(ModelGPT5Codex) } // alias of GPT-5.1 Codex Max
-func (c *Client) GPT4o() *Builder     { return c.New(ModelGPT4o) }
+// GPT5 returns a Builder configured for ModelGPT5 using this client's provider.
+func (c *Client) GPT5() *Builder { return c.New(ModelGPT5) }
+
+// GPT5Codex returns a Builder configured for ModelGPT5Codex using this client's provider.
+func (c *Client) GPT5Codex() *Builder { return c.New(ModelGPT5Codex) }
+
+// GPT4o returns a Builder configured for ModelGPT4o using this client's provider.
+func (c *Client) GPT4o() *Builder { return c.New(ModelGPT4o) }
+
+// GPT4oMini returns a Builder configured for ModelGPT4oMini using this client's provider.
 func (c *Client) GPT4oMini() *Builder { return c.New(ModelGPT4oMini) }
-func (c *Client) O1() *Builder        { return c.New(ModelO1) }
+
+// O1 returns a Builder configured for ModelO1 using this client's provider.
+func (c *Client) O1() *Builder { return c.New(ModelO1) }
 
 // GPT 5.x family
-func (c *Client) GPT52() *Builder    { return c.New(ModelGPT52) }
+// GPT52 returns a Builder configured for ModelGPT52 using this client's provider.
+func (c *Client) GPT52() *Builder { return c.New(ModelGPT52) }
+
+// GPT52Pro returns a Builder configured for ModelGPT52Pro using this client's provider.
 func (c *Client) GPT52Pro() *Builder { return c.New(ModelGPT52Pro) }
-func (c *Client) GPT51() *Builder    { return c.New(ModelGPT51) }
+
+// GPT51 returns a Builder configured for ModelGPT51 using this client's provider.
+func (c *Client) GPT51() *Builder { return c.New(ModelGPT51) }
+
+// GPT5Base returns a Builder configured for ModelGPT5Base using this client's provider.
 func (c *Client) GPT5Base() *Builder { return c.New(ModelGPT5Base) }
-func (c *Client) GPT5Pro() *Builder  { return c.New(ModelGPT5Pro) }
+
+// GPT5Pro returns a Builder configured for ModelGPT5Pro using this client's provider.
+func (c *Client) GPT5Pro() *Builder { return c.New(ModelGPT5Pro) }
+
+// GPT5Mini returns a Builder configured for ModelGPT5Mini using this client's provider.
 func (c *Client) GPT5Mini() *Builder { return c.New(ModelGPT5Mini) }
+
+// GPT5Nano returns a Builder configured for ModelGPT5Nano using this client's provider.
 func (c *Client) GPT5Nano() *Builder { return c.New(ModelGPT5Nano) }
 
 // Codex
-func (c *Client) GPT51Codex() *Builder      { return c.New(ModelGPT51Codex) }
-func (c *Client) GPT51CodexMax() *Builder   { return c.New(ModelGPT51CodexMax) }
-func (c *Client) GPT5CodexBase() *Builder   { return c.New(ModelGPT5CodexBase) }
-func (c *Client) GPT51CodexMini() *Builder  { return c.New(ModelGPT51CodexMini) }
+// GPT51Codex returns a Builder configured for ModelGPT51Codex using this client's provider.
+func (c *Client) GPT51Codex() *Builder { return c.New(ModelGPT51Codex) }
+
+// GPT51CodexMax returns a Builder configured for ModelGPT51CodexMax using this client's provider.
+func (c *Client) GPT51CodexMax() *Builder { return c.New(ModelGPT51CodexMax) }
+
+// GPT5CodexBase returns a Builder configured for ModelGPT5CodexBase using this client's provider.
+func (c *Client) GPT5CodexBase() *Builder { return c.New(ModelGPT5CodexBase) }
+
+// GPT51CodexMini returns a Builder configured for ModelGPT51CodexMini using this client's provider.
+func (c *Client) GPT51CodexMini() *Builder { return c.New(ModelGPT51CodexMini) }
+
+// CodexMiniLatest returns a Builder configured for ModelCodexMiniLatest using this client's provider.
 func (c *Client) CodexMiniLatest() *Builder { return c.New(ModelCodexMiniLatest) }
 
 // Search + agent tools
-func (c *Client) GPT5SearchAPI() *Builder      { return c.New(ModelGPT5SearchAPI) }
+// GPT5SearchAPI returns a Builder configured for ModelGPT5SearchAPI using this client's provider.
+func (c *Client) GPT5SearchAPI() *Builder { return c.New(ModelGPT5SearchAPI) }
+
+// ComputerUsePreview returns a Builder configured for ModelComputerUsePreview using this client's provider.
 func (c *Client) ComputerUsePreview() *Builder { return c.New(ModelComputerUsePreview) }
 
 // Aliases
-func (c *Client) GPT5ChatLatest() *Builder  { return c.New(ModelGPT5ChatLatest) }
+// GPT5ChatLatest returns a Builder configured for ModelGPT5ChatLatest using this client's provider.
+func (c *Client) GPT5ChatLatest() *Builder { return c.New(ModelGPT5ChatLatest) }
+
+// GPT52ChatLatest returns a Builder configured for ModelGPT52ChatLatest using this client's provider.
 func (c *Client) GPT52ChatLatest() *Builder { return c.New(ModelGPT52ChatLatest) }
+
+// GPT51ChatLatest returns a Builder configured for ModelGPT51ChatLatest using this client's provider.
 func (c *Client) GPT51ChatLatest() *Builder { return c.New(ModelGPT51ChatLatest) }
+
+// ChatGPT4oLatest returns a Builder configured for ModelChatGPT4oLatest using this client's provider.
 func (c *Client) ChatGPT4oLatest() *Builder { return c.New(ModelChatGPT4oLatest) }
 
 // GPT-4.1
-func (c *Client) GPT41() *Builder     { return c.New(ModelGPT41) }
+// GPT41 returns a Builder configured for ModelGPT41 using this client's provider.
+func (c *Client) GPT41() *Builder { return c.New(ModelGPT41) }
+
+// GPT41Mini returns a Builder configured for ModelGPT41Mini using this client's provider.
 func (c *Client) GPT41Mini() *Builder { return c.New(ModelGPT41Mini) }
+
+// GPT41Nano returns a Builder configured for ModelGPT41Nano using this client's provider.
 func (c *Client) GPT41Nano() *Builder { return c.New(ModelGPT41Nano) }
 
 // GPT-4o dated snapshot
+// GPT4o20240513 returns a Builder configured for ModelGPT4o20240513 using this client's provider.
 func (c *Client) GPT4o20240513() *Builder { return c.New(ModelGPT4o20240513) }
 
 // o-series
-func (c *Client) O1Mini() *Builder    { return c.New(ModelO1Mini) }
-func (c *Client) O1Pro() *Builder     { return c.New(ModelO1Pro) }
+// O1Mini returns a Builder configured for ModelO1Mini using this client's provider.
+func (c *Client) O1Mini() *Builder { return c.New(ModelO1Mini) }
+
+// O1Pro returns a Builder configured for ModelO1Pro using this client's provider.
+func (c *Client) O1Pro() *Builder { return c.New(ModelO1Pro) }
+
+// O1Preview returns a Builder configured for ModelO1Preview using this client's provider.
 func (c *Client) O1Preview() *Builder { return c.New(ModelO1Preview) }
-func (c *Client) O3() *Builder        { return c.New(ModelO3) }
-func (c *Client) O3Mini() *Builder    { return c.New(ModelO3Mini) }
-func (c *Client) O3Pro() *Builder     { return c.New(ModelO3Pro) }
+
+// O3 returns a Builder configured for ModelO3 using this client's provider.
+func (c *Client) O3() *Builder { return c.New(ModelO3) }
+
+// O3Mini returns a Builder configured for ModelO3Mini using this client's provider.
+func (c *Client) O3Mini() *Builder { return c.New(ModelO3Mini) }
+
+// O3Pro returns a Builder configured for ModelO3Pro using this client's provider.
+func (c *Client) O3Pro() *Builder { return c.New(ModelO3Pro) }
+
+// O3DeepResearch returns a Builder configured for ModelO3DeepResearch using this client's provider.
 func (c *Client) O3DeepResearch() *Builder {
 	return c.New(ModelO3DeepResearch)
 }
+
+// O4Mini returns a Builder configured for ModelO4Mini using this client's provider.
 func (c *Client) O4Mini() *Builder { return c.New(ModelO4Mini) }
+
+// O4MiniDeepResearch returns a Builder configured for ModelO4MiniDeepResearch using this client's provider.
 func (c *Client) O4MiniDeepResearch() *Builder {
 	return c.New(ModelO4MiniDeepResearch)
 }
 
 // Realtime / audio
-func (c *Client) GPTRealtime() *Builder              { return c.New(ModelGPTRealtime) }
-func (c *Client) GPTRealtimeMini() *Builder          { return c.New(ModelGPTRealtimeMini) }
-func (c *Client) GPT4oRealtimePreview() *Builder     { return c.New(ModelGPT4oRealtimePreview) }
+// GPTRealtime returns a Builder configured for ModelGPTRealtime using this client's provider.
+func (c *Client) GPTRealtime() *Builder { return c.New(ModelGPTRealtime) }
+
+// GPTRealtimeMini returns a Builder configured for ModelGPTRealtimeMini using this client's provider.
+func (c *Client) GPTRealtimeMini() *Builder { return c.New(ModelGPTRealtimeMini) }
+
+// GPT4oRealtimePreview returns a Builder configured for ModelGPT4oRealtimePreview using this client's provider.
+func (c *Client) GPT4oRealtimePreview() *Builder { return c.New(ModelGPT4oRealtimePreview) }
+
+// GPT4oMiniRealtimePreview returns a Builder configured for ModelGPT4oMiniRealtimePreview using this client's provider.
 func (c *Client) GPT4oMiniRealtimePreview() *Builder { return c.New(ModelGPT4oMiniRealtimePreview) }
-func (c *Client) GPTAudio() *Builder                 { return c.New(ModelGPTAudio) }
-func (c *Client) GPTAudioMini() *Builder             { return c.New(ModelGPTAudioMini) }
-func (c *Client) GPT4oAudioPreview() *Builder        { return c.New(ModelGPT4oAudioPreview) }
-func (c *Client) GPT4oMiniAudioPreview() *Builder    { return c.New(ModelGPT4oMiniAudioPreview) }
+
+// GPTAudio returns a Builder configured for ModelGPTAudio using this client's provider.
+func (c *Client) GPTAudio() *Builder { return c.New(ModelGPTAudio) }
+
+// GPTAudioMini returns a Builder configured for ModelGPTAudioMini using this client's provider.
+func (c *Client) GPTAudioMini() *Builder { return c.New(ModelGPTAudioMini) }
+
+// GPT4oAudioPreview returns a Builder configured for ModelGPT4oAudioPreview using this client's provider.
+func (c *Client) GPT4oAudioPreview() *Builder { return c.New(ModelGPT4oAudioPreview) }
+
+// GPT4oMiniAudioPreview returns a Builder configured for ModelGPT4oMiniAudioPreview using this client's provider.
+func (c *Client) GPT4oMiniAudioPreview() *Builder { return c.New(ModelGPT4oMiniAudioPreview) }
 
 // Search previews
+// GPT4oMiniSearchPreview returns a Builder configured for ModelGPT4oMiniSearchPreview using this client's provider.
 func (c *Client) GPT4oMiniSearchPreview() *Builder { return c.New(ModelGPT4oMiniSearchPreview) }
-func (c *Client) GPT4oSearchPreview() *Builder     { return c.New(ModelGPT4oSearchPreview) }
+
+// GPT4oSearchPreview returns a Builder configured for ModelGPT4oSearchPreview using this client's provider.
+func (c *Client) GPT4oSearchPreview() *Builder { return c.New(ModelGPT4oSearchPreview) }
 
 // Speech / transcription
-func (c *Client) GPT4oMiniTTS() *Builder           { return c.New(ModelGPT4oMiniTTS) }
-func (c *Client) GPT4oTranscribe() *Builder        { return c.New(ModelGPT4oTranscribe) }
+// GPT4oMiniTTS returns a Builder configured for ModelGPT4oMiniTTS using this client's provider.
+func (c *Client) GPT4oMiniTTS() *Builder { return c.New(ModelGPT4oMiniTTS) }
+
+// GPT4oTranscribe returns a Builder configured for ModelGPT4oTranscribe using this client's provider.
+func (c *Client) GPT4oTranscribe() *Builder { return c.New(ModelGPT4oTranscribe) }
+
+// GPT4oTranscribeDiarize returns a Builder configured for ModelGPT4oTranscribeDiarize using this client's provider.
 func (c *Client) GPT4oTranscribeDiarize() *Builder { return c.New(ModelGPT4oTranscribeDiarize) }
-func (c *Client) GPT4oMiniTranscribe() *Builder    { return c.New(ModelGPT4oMiniTranscribe) }
+
+// GPT4oMiniTranscribe returns a Builder configured for ModelGPT4oMiniTranscribe using this client's provider.
+func (c *Client) GPT4oMiniTranscribe() *Builder { return c.New(ModelGPT4oMiniTranscribe) }
 
 // Image generation
-func (c *Client) GPTImage15() *Builder         { return c.New(ModelGPTImage15) }
-func (c *Client) GPTImage1() *Builder          { return c.New(ModelGPTImage1) }
-func (c *Client) GPTImage1Mini() *Builder      { return c.New(ModelGPTImage1Mini) }
+// GPTImage15 returns a Builder configured for ModelGPTImage15 using this client's provider.
+func (c *Client) GPTImage15() *Builder { return c.New(ModelGPTImage15) }
+
+// GPTImage1 returns a Builder configured for ModelGPTImage1 using this client's provider.
+func (c *Client) GPTImage1() *Builder { return c.New(ModelGPTImage1) }
+
+// GPTImage1Mini returns a Builder configured for ModelGPTImage1Mini using this client's provider.
+func (c *Client) GPTImage1Mini() *Builder { return c.New(ModelGPTImage1Mini) }
+
+// ChatGPTImageLatest returns a Builder configured for ModelChatGPTImageLatest using this client's provider.
 func (c *Client) ChatGPTImageLatest() *Builder { return c.New(ModelChatGPTImageLatest) }
 
 // Open-weight models
+// GPTOSS120B returns a Builder configured for ModelGPTOSS120B using this client's provider.
 func (c *Client) GPTOSS120B() *Builder { return c.New(ModelGPTOSS120B) }
-func (c *Client) GPTOSS20B() *Builder  { return c.New(ModelGPTOSS20B) }
+
+// GPTOSS20B returns a Builder configured for ModelGPTOSS20B using this client's provider.
+func (c *Client) GPTOSS20B() *Builder { return c.New(ModelGPTOSS20B) }
 
 // Video generation
-func (c *Client) Sora2() *Builder    { return c.New(ModelSora2) }
+// Sora2 returns a Builder configured for ModelSora2 using this client's provider.
+func (c *Client) Sora2() *Builder { return c.New(ModelSora2) }
+
+// Sora2Pro returns a Builder configured for ModelSora2Pro using this client's provider.
 func (c *Client) Sora2Pro() *Builder { return c.New(ModelSora2Pro) }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Anthropic Model Shortcuts
 // ═══════════════════════════════════════════════════════════════════════════
 
-func (c *Client) Claude() *Builder       { return c.New(ModelClaudeOpus) }
-func (c *Client) ClaudeOpus() *Builder   { return c.New(ModelClaudeOpus) }
+// Claude returns a Builder configured for ModelClaudeOpus using this client's provider.
+func (c *Client) Claude() *Builder { return c.New(ModelClaudeOpus) }
+
+// ClaudeOpus returns a Builder configured for ModelClaudeOpus using this client's provider.
+func (c *Client) ClaudeOpus() *Builder { return c.New(ModelClaudeOpus) }
+
+// ClaudeSonnet returns a Builder configured for ModelClaudeSonnet using this client's provider.
 func (c *Client) ClaudeSonnet() *Builder { return c.New(ModelClaudeSonnet) }
-func (c *Client) ClaudeHaiku() *Builder  { return c.New(ModelClaudeHaiku) }
+
+// ClaudeHaiku returns a Builder configured for ModelClaudeHaiku using this client's provider.
+func (c *Client) ClaudeHaiku() *Builder { return c.New(ModelClaudeHaiku) }
 
 // Additional Claude variants (OpenRouter slugs, normalized for native Anthropic)
-func (c *Client) ClaudeOpus41() *Builder   { return c.New(ModelClaudeOpus41) }
-func (c *Client) ClaudeOpus4() *Builder    { return c.New(ModelClaudeOpus4) }
-func (c *Client) ClaudeSonnet4() *Builder  { return c.New(ModelClaudeSonnet4) }
+// ClaudeOpus41 returns a Builder configured for ModelClaudeOpus41 using this client's provider.
+func (c *Client) ClaudeOpus41() *Builder { return c.New(ModelClaudeOpus41) }
+
+// ClaudeOpus4 returns a Builder configured for ModelClaudeOpus4 using this client's provider.
+func (c *Client) ClaudeOpus4() *Builder { return c.New(ModelClaudeOpus4) }
+
+// ClaudeSonnet4 returns a Builder configured for ModelClaudeSonnet4 using this client's provider.
+func (c *Client) ClaudeSonnet4() *Builder { return c.New(ModelClaudeSonnet4) }
+
+// ClaudeSonnet37 returns a Builder configured for ModelClaudeSonnet37 using this client's provider.
 func (c *Client) ClaudeSonnet37() *Builder { return c.New(ModelClaudeSonnet37) }
-func (c *Client) ClaudeHaiku35() *Builder  { return c.New(ModelClaudeHaiku35) }
-func (c *Client) ClaudeHaiku3() *Builder   { return c.New(ModelClaudeHaiku3) }
-func (c *Client) ClaudeOpus3() *Builder    { return c.New(ModelClaudeOpus3) }
-func (c *Client) ClaudeSonnet3() *Builder  { return c.New(ModelClaudeSonnet3) }
+
+// ClaudeHaiku35 returns a Builder configured for ModelClaudeHaiku35 using this client's provider.
+func (c *Client) ClaudeHaiku35() *Builder { return c.New(ModelClaudeHaiku35) }
+
+// ClaudeHaiku3 returns a Builder configured for ModelClaudeHaiku3 using this client's provider.
+func (c *Client) ClaudeHaiku3() *Builder { return c.New(ModelClaudeHaiku3) }
+
+// ClaudeOpus3 returns a Builder configured for ModelClaudeOpus3 using this client's provider.
+func (c *Client) ClaudeOpus3() *Builder { return c.New(ModelClaudeOpus3) }
+
+// ClaudeSonnet3 returns a Builder configured for ModelClaudeSonnet3 using this client's provider.
+func (c *Client) ClaudeSonnet3() *Builder { return c.New(ModelClaudeSonnet3) }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Google Model Shortcuts
 // ═══════════════════════════════════════════════════════════════════════════
 
-func (c *Client) Gemini() *Builder      { return c.New(ModelGemini3Flash) }
-func (c *Client) GeminiPro() *Builder   { return c.New(ModelGemini3Pro) }
+// Gemini returns a Builder configured for ModelGemini3Flash using this client's provider.
+func (c *Client) Gemini() *Builder { return c.New(ModelGemini3Flash) }
+
+// GeminiPro returns a Builder configured for ModelGemini3Pro using this client's provider.
+func (c *Client) GeminiPro() *Builder { return c.New(ModelGemini3Pro) }
+
+// GeminiFlash returns a Builder configured for ModelGemini3Flash using this client's provider.
 func (c *Client) GeminiFlash() *Builder { return c.New(ModelGemini3Flash) }
 
 // Explicit Gemini 3 names (aliases for clarity)
-func (c *Client) Gemini3Pro() *Builder        { return c.New(ModelGemini3Pro) }
-func (c *Client) Gemini3Flash() *Builder      { return c.New(ModelGemini3Flash) }
-func (c *Client) Gemini25Pro() *Builder       { return c.New(ModelGemini25Pro) }
-func (c *Client) Gemini25Flash() *Builder     { return c.New(ModelGemini25Flash) }
+// Gemini3Pro returns a Builder configured for ModelGemini3Pro using this client's provider.
+func (c *Client) Gemini3Pro() *Builder { return c.New(ModelGemini3Pro) }
+
+// Gemini3Flash returns a Builder configured for ModelGemini3Flash using this client's provider.
+func (c *Client) Gemini3Flash() *Builder { return c.New(ModelGemini3Flash) }
+
+// Gemini25Pro returns a Builder configured for ModelGemini25Pro using this client's provider.
+func (c *Client) Gemini25Pro() *Builder { return c.New(ModelGemini25Pro) }
+
+// Gemini25Flash returns a Builder configured for ModelGemini25Flash using this client's provider.
+func (c *Client) Gemini25Flash() *Builder { return c.New(ModelGemini25Flash) }
+
+// Gemini25FlashLite returns a Builder configured for ModelGemini25FlashLite using this client's provider.
 func (c *Client) Gemini25FlashLite() *Builder { return c.New(ModelGemini25FlashLite) }
-func (c *Client) Gemini2Pro() *Builder        { return c.New(ModelGemini2Pro) } // compat (maps to Gemini 2.5 Pro)
-func (c *Client) Gemini2Flash() *Builder      { return c.New(ModelGemini2Flash) }
-func (c *Client) Gemini2FlashLite() *Builder  { return c.New(ModelGemini2FlashLite) }
+
+// Gemini2Pro returns a Builder configured for ModelGemini2Pro using this client's provider.
+func (c *Client) Gemini2Pro() *Builder { return c.New(ModelGemini2Pro) }
+
+// Gemini2Flash returns a Builder configured for ModelGemini2Flash using this client's provider.
+func (c *Client) Gemini2Flash() *Builder { return c.New(ModelGemini2Flash) }
+
+// Gemini2FlashLite returns a Builder configured for ModelGemini2FlashLite using this client's provider.
+func (c *Client) Gemini2FlashLite() *Builder { return c.New(ModelGemini2FlashLite) }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Other Model Shortcuts
 // ═══════════════════════════════════════════════════════════════════════════
 
-func (c *Client) Grok() *Builder     { return c.New(ModelGrok3) }
+// Grok returns a Builder configured for ModelGrok3 using this client's provider.
+func (c *Client) Grok() *Builder { return c.New(ModelGrok3) }
+
+// GrokFast returns a Builder configured for ModelGrok41Fast using this client's provider.
 func (c *Client) GrokFast() *Builder { return c.New(ModelGrok41Fast) }
+
+// GrokMini returns a Builder configured for ModelGrok3Mini using this client's provider.
 func (c *Client) GrokMini() *Builder { return c.New(ModelGrok3Mini) }
 
 // Explicit xAI names (aliases for symmetry)
-func (c *Client) Grok3() *Builder      { return c.New(ModelGrok3) }
-func (c *Client) Grok3Mini() *Builder  { return c.New(ModelGrok3Mini) }
+// Grok3 returns a Builder configured for ModelGrok3 using this client's provider.
+func (c *Client) Grok3() *Builder { return c.New(ModelGrok3) }
+
+// Grok3Mini returns a Builder configured for ModelGrok3Mini using this client's provider.
+func (c *Client) Grok3Mini() *Builder { return c.New(ModelGrok3Mini) }
+
+// Grok41Fast returns a Builder configured for ModelGrok41Fast using this client's provider.
 func (c *Client) Grok41Fast() *Builder { return c.New(ModelGrok41Fast) }
 
-func (c *Client) Qwen() *Builder      { return c.New(ModelQwen3Next) }
-func (c *Client) Qwen3Next() *Builder { return c.New(ModelQwen3Next) }
-func (c *Client) Qwen3() *Builder     { return c.New(ModelQwen3) }
+// Qwen returns a Builder configured for ModelQwen3Next using this client's provider.
+func (c *Client) Qwen() *Builder { return c.New(ModelQwen3Next) }
 
-func (c *Client) Llama() *Builder        { return c.New(ModelLlama4) }
-func (c *Client) Llama4() *Builder       { return c.New(ModelLlama4) }
-func (c *Client) Mistral() *Builder      { return c.New(ModelMistralLarge) }
+// Qwen3Next returns a Builder configured for ModelQwen3Next using this client's provider.
+func (c *Client) Qwen3Next() *Builder { return c.New(ModelQwen3Next) }
+
+// Qwen3 returns a Builder configured for ModelQwen3 using this client's provider.
+func (c *Client) Qwen3() *Builder { return c.New(ModelQwen3) }
+
+// Llama returns a Builder configured for ModelLlama4 using this client's provider.
+func (c *Client) Llama() *Builder { return c.New(ModelLlama4) }
+
+// Llama4 returns a Builder configured for ModelLlama4 using this client's provider.
+func (c *Client) Llama4() *Builder { return c.New(ModelLlama4) }
+
+// Mistral returns a Builder configured for ModelMistralLarge using this client's provider.
+func (c *Client) Mistral() *Builder { return c.New(ModelMistralLarge) }
+
+// MistralLarge returns a Builder configured for ModelMistralLarge using this client's provider.
 func (c *Client) MistralLarge() *Builder { return c.New(ModelMistralLarge) }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Azure Provider (special constructor)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// AzureProvider is a specialized OpenAI provider for Azure deployments
+// AzureProvider is a specialized OpenAI provider for Azure deployments.
+// It handles Azure-specific authentication and endpoint formatting.
 type AzureProvider struct {
 	*OpenAIProvider
 	deploymentURL string
 }
 
-// NewAzureProvider creates an Azure OpenAI provider
+// NewAzureProvider creates a new Azure OpenAI provider.
+// It requires a deployment URL and API key.
+// If the BaseURL is empty, it uses a placeholder that must be replaced.
+// If the APIKey is empty, it attempts to read from AZURE_OPENAI_API_KEY or OPENAI_API_KEY env vars.
 func NewAzureProvider(config ProviderConfig) *AzureProvider {
 	// Azure requires a custom endpoint
 	if config.BaseURL == "" {
@@ -291,6 +467,7 @@ func NewAzureProvider(config ProviderConfig) *AzureProvider {
 	}
 }
 
+// Name returns the provider identifier ("azure").
 func (p *AzureProvider) Name() string {
 	return "azure"
 }
@@ -308,7 +485,8 @@ func getEnvWithFallback(primary, fallback string) string {
 // These maintain backward compatibility with the original client.go
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Send makes a request using the default provider (backward compatible)
+// Send makes a request using the default provider.
+// This function is kept for backward compatibility; prefer using Builder.
 func Send(model Model, messages []Message, opts ...SendOptions) (string, *Response, error) {
 	var opt SendOptions
 	if len(opts) > 0 {
@@ -352,7 +530,8 @@ func Send(model Model, messages []Message, opts ...SendOptions) (string, *Respon
 	return resp.Content, toResponse(resp), nil
 }
 
-// SendWithTools makes a request with tool calling support (backward compatible)
+// SendWithTools makes a request with tool calling support using the default provider.
+// This function is kept for backward compatibility; prefer using Builder.Tool().
 func SendWithTools(model Model, messages []Message, tools []Tool, opts ...SendOptions) (string, *Response, []ToolCall, error) {
 	var opt SendOptions
 	if len(opts) > 0 {

@@ -17,13 +17,13 @@ import (
 
 const googleBaseURL = "https://generativelanguage.googleapis.com/v1beta"
 
-// GoogleProvider implements Provider for Google's Gemini API
+// GoogleProvider implements Provider for Google's Gemini API.
 type GoogleProvider struct {
 	config     ProviderConfig
 	httpClient *http.Client
 }
 
-// NewGoogleProvider creates a Google/Gemini provider
+// NewGoogleProvider creates a GoogleProvider.
 func NewGoogleProvider(config ProviderConfig) *GoogleProvider {
 	if config.BaseURL == "" {
 		config.BaseURL = googleBaseURL
@@ -38,10 +38,12 @@ func NewGoogleProvider(config ProviderConfig) *GoogleProvider {
 	return &GoogleProvider{config: config, httpClient: client}
 }
 
+// Name returns the provider identifier ("google").
 func (p *GoogleProvider) Name() string {
 	return "google"
 }
 
+// Capabilities reports the features supported by this provider implementation.
 func (p *GoogleProvider) Capabilities() ProviderCapabilities {
 	return ProviderCapabilities{
 		Tools:     true,
@@ -57,6 +59,7 @@ func (p *GoogleProvider) Capabilities() ProviderCapabilities {
 // Send
 // ═══════════════════════════════════════════════════════════════════════════
 
+// Send executes a non-streaming request.
 func (p *GoogleProvider) Send(ctx context.Context, req *ProviderRequest) (*ProviderResponse, error) {
 	if p.config.APIKey == "" {
 		return nil, &ProviderError{
@@ -103,6 +106,7 @@ func (p *GoogleProvider) Send(ctx context.Context, req *ProviderRequest) (*Provi
 // SendStream
 // ═══════════════════════════════════════════════════════════════════════════
 
+// SendStream executes a streaming request and invokes callback for each chunk.
 func (p *GoogleProvider) SendStream(ctx context.Context, req *ProviderRequest, callback StreamCallback) (*ProviderResponse, error) {
 	if p.config.APIKey == "" {
 		return nil, &ProviderError{

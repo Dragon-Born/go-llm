@@ -11,16 +11,16 @@ import (
 // Structured Output / Schema Enforcement
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Schema sets a struct type for guaranteed structured output
-// The model will be forced to return JSON matching this exact schema
+// Schema enables structured output by setting a schema target (usually a struct).
+// The request is forced into JSON mode and the provider may be instructed to match the schema.
 func (b *Builder) Schema(v any) *Builder {
 	b.schema = v
 	b.jsonMode = true
 	return b
 }
 
-// Into sends request and unmarshals response into target struct
-// This is the main DX-friendly way to get structured output
+// Into sends a prompt and unmarshals the JSON response into target.
+// It enables JSON mode and strips any surrounding markdown code fences.
 func (b *Builder) Into(prompt string, target any) error {
 	// Generate schema from target type
 	schema := structToSchema(target)
@@ -37,7 +37,7 @@ func (b *Builder) Into(prompt string, target any) error {
 	return json.Unmarshal([]byte(resp), target)
 }
 
-// AskInto is an alias for Into (for consistency with Ask pattern)
+// AskInto is an alias for Into (for consistency with the Ask naming pattern).
 func (b *Builder) AskInto(prompt string, target any) error {
 	return b.Into(prompt, target)
 }
@@ -160,7 +160,7 @@ func cleanJSONResponse(resp string) string {
 // Quick Extraction Helpers
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ExtractJSON extracts and parses JSON from a response string
+// ExtractJSON extracts and parses JSON from a response string.
 func ExtractJSON[T any](response string) (T, error) {
 	var result T
 	cleaned := cleanJSONResponse(response)
@@ -168,7 +168,7 @@ func ExtractJSON[T any](response string) (T, error) {
 	return result, err
 }
 
-// ExtractCodeBlock extracts a code block of a specific language from response
+// ExtractCodeBlock extracts a code block of a specific language from response.
 func ExtractCodeBlock(response, language string) string {
 	prefix := "```" + language
 	start := strings.Index(response, prefix)
@@ -190,7 +190,7 @@ func ExtractCodeBlock(response, language string) string {
 	return strings.TrimSpace(response[start : start+end])
 }
 
-// ExtractAllCodeBlocks extracts all code blocks from response
+// ExtractAllCodeBlocks extracts all code blocks from response.
 func ExtractAllCodeBlocks(response string) []string {
 	var blocks []string
 	remaining := response
@@ -224,12 +224,12 @@ func ExtractAllCodeBlocks(response string) []string {
 // Type-Safe Extraction with Generics
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Parse parses a response into a typed struct
+// Parse parses a response into a typed struct.
 func Parse[T any](response string) (T, error) {
 	return ExtractJSON[T](response)
 }
 
-// MustParse parses a response or panics
+// MustParse parses a response or panics.
 func MustParse[T any](response string) T {
 	result, err := ExtractJSON[T](response)
 	if err != nil {

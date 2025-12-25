@@ -1,6 +1,7 @@
 package ai
 
-// Model represents an AI model identifier for OpenRouter
+// Model represents a unique identifier for an AI model.
+// Models are typically namespaced by provider (e.g., "openai/gpt-5").
 type Model string
 
 // Latest models as of December 2025
@@ -143,7 +144,7 @@ const (
 	ModelMistralLarge Model = "mistralai/mistral-large"
 )
 
-// ModelInfo contains metadata about a model
+// ModelInfo contains descriptive metadata about a model.
 type ModelInfo struct {
 	ID          Model
 	Name        string
@@ -151,7 +152,8 @@ type ModelInfo struct {
 	Description string
 }
 
-// Models registry for easy lookup
+// Models is a registry of known models with their metadata.
+// Useful for UI lists or validation.
 var Models = map[Model]ModelInfo{
 	ModelGPT5:              {ModelGPT5, "GPT-5.2", "OpenAI", "General purpose, long context"},
 	ModelGPT5Mini:          {ModelGPT5Mini, "GPT-5 mini", "OpenAI", "Faster, cost-efficient version of GPT-5"},
@@ -182,6 +184,7 @@ var Models = map[Model]ModelInfo{
 	ModelLlama4:            {ModelLlama4, "Llama 4 Maverick", "Meta", "Open weights leader"},
 }
 
+// String returns the provider-qualified model ID string.
 func (m Model) String() string {
 	return string(m)
 }

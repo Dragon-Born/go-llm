@@ -13,7 +13,7 @@ import (
 // Structured Output with Retry-on-Parse-Error (Instructor-style)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ParseConfig configures structured output parsing with retries
+// ParseConfig configures structured output parsing with retries.
 type ParseConfig struct {
 	MaxRetries     int           // max parse retry attempts (default: 3)
 	ValidateOutput bool          // run struct validators (default: true)
@@ -22,7 +22,7 @@ type ParseConfig struct {
 	Timeout        time.Duration // timeout per attempt
 }
 
-// DefaultParseConfig returns sensible defaults
+// DefaultParseConfig returns sensible defaults.
 func DefaultParseConfig() *ParseConfig {
 	return &ParseConfig{
 		MaxRetries:     3,
@@ -32,7 +32,7 @@ func DefaultParseConfig() *ParseConfig {
 	}
 }
 
-// ParseError contains details about a parse failure
+// ParseError contains details about a parse/validation failure.
 type ParseError struct {
 	Attempt       int
 	RawResponse   string
@@ -40,6 +40,7 @@ type ParseError struct {
 	ValidationErr error
 }
 
+// Error implements the error interface.
 func (e *ParseError) Error() string {
 	if e.ValidationErr != nil {
 		return fmt.Sprintf("validation failed on attempt %d: %v", e.Attempt, e.ValidationErr)
@@ -47,7 +48,7 @@ func (e *ParseError) Error() string {
 	return fmt.Sprintf("parse failed on attempt %d: %v", e.Attempt, e.ParseErr)
 }
 
-// ParseResult contains the parsed output and metadata
+// ParseResult contains the parsed output and metadata.
 type ParseResult[T any] struct {
 	Value       T
 	RawResponse string
@@ -71,12 +72,12 @@ func (b *Builder) IntoWithRetry(prompt string, target any, maxRetries int) error
 	})
 }
 
-// ParseIntoWithConfig parses with full configuration control
+// ParseIntoWithConfig parses with full configuration control.
 func (b *Builder) ParseIntoWithConfig(prompt string, target any, config *ParseConfig) error {
 	return parseIntoAny(b, prompt, target, config)
 }
 
-// MustInto parses into target or panics (useful for scripts/tests)
+// MustInto parses into target or panics (useful for scripts/tests).
 func (b *Builder) MustInto(prompt string, target any) {
 	if err := b.IntoWithRetry(prompt, target, 3); err != nil {
 		panic(fmt.Sprintf("parse failed: %v", err))
@@ -193,7 +194,7 @@ Important:
 // Core Parse Function with Retry Logic
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ParseInto attempts to parse LLM response into target struct with retries
+// ParseInto attempts to parse an LLM response into target with retries.
 func ParseInto[T any](b *Builder, prompt string, target *T, config *ParseConfig) ParseResult[T] {
 	if config == nil {
 		config = DefaultParseConfig()

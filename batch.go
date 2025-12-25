@@ -11,7 +11,7 @@ import (
 // Batch Processing
 // ═══════════════════════════════════════════════════════════════════════════
 
-// BatchResult holds a single result from batch processing
+// BatchResult holds a single result from batch processing.
 type BatchResult struct {
 	Index   int           // original index in batch
 	Content string        // response content
@@ -21,7 +21,7 @@ type BatchResult struct {
 	Latency time.Duration // request latency
 }
 
-// BatchConfig configures batch processing
+// BatchConfig configures batch processing.
 type BatchConfig struct {
 	MaxConcurrency int           // max parallel requests (default: 5)
 	Timeout        time.Duration // per-request timeout (0 = no timeout)
@@ -29,7 +29,7 @@ type BatchConfig struct {
 	RetryConfig    *RetryConfig  // retry config for failed requests
 }
 
-// DefaultBatchConfig returns sensible defaults
+// DefaultBatchConfig returns sensible defaults.
 func DefaultBatchConfig() *BatchConfig {
 	return &BatchConfig{
 		MaxConcurrency: 5,
@@ -43,14 +43,14 @@ func DefaultBatchConfig() *BatchConfig {
 // Batch Builder - Fluent API
 // ═══════════════════════════════════════════════════════════════════════════
 
-// BatchBuilder provides a fluent API for batch processing
+// BatchBuilder provides a fluent API for batch processing.
 type BatchBuilder struct {
 	builders []*Builder
 	config   *BatchConfig
 	ctx      context.Context
 }
 
-// Batch creates a new batch builder
+// Batch creates a new batch builder.
 func Batch(builders ...*Builder) *BatchBuilder {
 	return &BatchBuilder{
 		builders: builders,
@@ -59,13 +59,13 @@ func Batch(builders ...*Builder) *BatchBuilder {
 	}
 }
 
-// Add adds more builders to the batch
+// Add adds more builders to the batch.
 func (b *BatchBuilder) Add(builders ...*Builder) *BatchBuilder {
 	b.builders = append(b.builders, builders...)
 	return b
 }
 
-// Concurrency sets max parallel requests
+// Concurrency sets max parallel requests.
 func (b *BatchBuilder) Concurrency(n int) *BatchBuilder {
 	if n < 1 {
 		n = 1
@@ -74,31 +74,31 @@ func (b *BatchBuilder) Concurrency(n int) *BatchBuilder {
 	return b
 }
 
-// Timeout sets per-request timeout
+// Timeout sets per-request timeout.
 func (b *BatchBuilder) Timeout(d time.Duration) *BatchBuilder {
 	b.config.Timeout = d
 	return b
 }
 
-// StopOnError stops all processing on first error
+// StopOnError stops all processing on first error.
 func (b *BatchBuilder) StopOnError() *BatchBuilder {
 	b.config.StopOnError = true
 	return b
 }
 
-// WithRetry sets retry config for failed requests
+// WithRetry sets retry config for failed requests.
 func (b *BatchBuilder) WithRetry(config *RetryConfig) *BatchBuilder {
 	b.config.RetryConfig = config
 	return b
 }
 
-// WithContext sets the context for all requests
+// WithContext sets the context for all requests.
 func (b *BatchBuilder) WithContext(ctx context.Context) *BatchBuilder {
 	b.ctx = ctx
 	return b
 }
 
-// Config sets a custom batch config
+// Config sets a custom batch config.
 func (b *BatchBuilder) Config(config *BatchConfig) *BatchBuilder {
 	b.config = config
 	return b
@@ -108,7 +108,7 @@ func (b *BatchBuilder) Config(config *BatchConfig) *BatchBuilder {
 // Execution
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Do executes all requests and returns results
+// Do executes all requests and returns results.
 func (b *BatchBuilder) Do() []BatchResult {
 	if len(b.builders) == 0 {
 		return nil
@@ -219,7 +219,7 @@ func (b *BatchBuilder) Do() []BatchResult {
 	return results
 }
 
-// DoStrings executes and returns just the content strings
+// DoStrings executes and returns just the content strings.
 func (b *BatchBuilder) DoStrings() ([]string, error) {
 	results := b.Do()
 
@@ -239,7 +239,7 @@ func (b *BatchBuilder) DoStrings() ([]string, error) {
 // Quick Batch Helpers
 // ═══════════════════════════════════════════════════════════════════════════
 
-// BatchPrompts creates a batch from multiple prompts using the same model
+// BatchPrompts creates a batch from multiple prompts using the same model.
 func BatchPrompts(model Model, prompts ...string) *BatchBuilder {
 	builders := make([]*Builder, len(prompts))
 	for i, prompt := range prompts {
@@ -248,7 +248,7 @@ func BatchPrompts(model Model, prompts ...string) *BatchBuilder {
 	return Batch(builders...)
 }
 
-// BatchPromptsWithSystem creates a batch with shared system prompt
+// BatchPromptsWithSystem creates a batch with a shared system prompt.
 func BatchPromptsWithSystem(model Model, system string, prompts ...string) *BatchBuilder {
 	builders := make([]*Builder, len(prompts))
 	for i, prompt := range prompts {
@@ -257,7 +257,7 @@ func BatchPromptsWithSystem(model Model, system string, prompts ...string) *Batc
 	return Batch(builders...)
 }
 
-// BatchModels sends the same prompt to multiple models
+// BatchModels sends the same prompt to multiple models.
 func BatchModels(prompt string, models ...Model) *BatchBuilder {
 	builders := make([]*Builder, len(models))
 	for i, model := range models {
@@ -270,10 +270,10 @@ func BatchModels(prompt string, models ...Model) *BatchBuilder {
 // Batch Result Helpers
 // ═══════════════════════════════════════════════════════════════════════════
 
-// BatchResults wraps []BatchResult with helper methods
+// BatchResults wraps []BatchResult with helper methods.
 type BatchResults []BatchResult
 
-// Successful returns only successful results
+// Successful returns only successful results.
 func (r BatchResults) Successful() BatchResults {
 	var results BatchResults
 	for _, res := range r {
@@ -284,7 +284,7 @@ func (r BatchResults) Successful() BatchResults {
 	return results
 }
 
-// Failed returns only failed results
+// Failed returns only failed results.
 func (r BatchResults) Failed() BatchResults {
 	var results BatchResults
 	for _, res := range r {
@@ -295,7 +295,7 @@ func (r BatchResults) Failed() BatchResults {
 	return results
 }
 
-// Errors returns all errors
+// Errors returns all errors.
 func (r BatchResults) Errors() []error {
 	var errors []error
 	for _, res := range r {
@@ -306,7 +306,7 @@ func (r BatchResults) Errors() []error {
 	return errors
 }
 
-// Contents returns all content strings (empty for errors)
+// Contents returns all content strings (empty for errors).
 func (r BatchResults) Contents() []string {
 	contents := make([]string, len(r))
 	for i, res := range r {
@@ -315,7 +315,7 @@ func (r BatchResults) Contents() []string {
 	return contents
 }
 
-// TotalTokens returns sum of all tokens used
+// TotalTokens returns sum of all tokens used.
 func (r BatchResults) TotalTokens() int {
 	var total int
 	for _, res := range r {
@@ -324,7 +324,7 @@ func (r BatchResults) TotalTokens() int {
 	return total
 }
 
-// TotalLatency returns sum of all latencies
+// TotalLatency returns sum of all latencies.
 func (r BatchResults) TotalLatency() time.Duration {
 	var total time.Duration
 	for _, res := range r {
@@ -333,7 +333,7 @@ func (r BatchResults) TotalLatency() time.Duration {
 	return total
 }
 
-// SuccessRate returns the success rate (0-1)
+// SuccessRate returns the success rate (0-1).
 func (r BatchResults) SuccessRate() float64 {
 	if len(r) == 0 {
 		return 0
@@ -345,7 +345,7 @@ func (r BatchResults) SuccessRate() float64 {
 // Fan-Out / Fan-In Patterns
 // ═══════════════════════════════════════════════════════════════════════════
 
-// FanOut sends a prompt to multiple models and returns the first success
+// FanOut sends a prompt to multiple models and returns the first success.
 func FanOut(prompt string, models ...Model) (string, Model, error) {
 	if len(models) == 0 {
 		return "", "", fmt.Errorf("no models provided")
@@ -387,7 +387,7 @@ func FanOut(prompt string, models ...Model) (string, Model, error) {
 	return "", "", fmt.Errorf("all %d models failed: %v", len(models), errors)
 }
 
-// Race is an alias for FanOut - sends prompt to multiple models, returns first success
+// Race is an alias for FanOut.
 func Race(prompt string, models ...Model) (string, Model, error) {
 	return FanOut(prompt, models...)
 }

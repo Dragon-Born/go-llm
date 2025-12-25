@@ -15,18 +15,20 @@ import (
 // Retry Configuration
 // ═══════════════════════════════════════════════════════════════════════════
 
-// RetryConfig configures retry behavior
+// RetryConfig defines the strategy for retrying failed requests.
+// It supports exponential backoff, jitter, and selective retries based on error types.
 type RetryConfig struct {
-	MaxRetries    int           // max number of retries (default: 3)
-	InitialDelay  time.Duration // initial delay before first retry (default: 1s)
-	MaxDelay      time.Duration // maximum delay cap (default: 60s)
-	Multiplier    float64       // backoff multiplier (default: 2.0)
-	Jitter        float64       // jitter factor 0-1 (default: 0.1)
-	RetryOnStatus []int         // HTTP status codes to retry on
-	RetryOnErrors []string      // error substrings to retry on
+	MaxRetries    int           // Maximum number of retry attempts (default: 3)
+	InitialDelay  time.Duration // Delay before the first retry (default: 1s)
+	MaxDelay      time.Duration // Maximum delay between retries (default: 60s)
+	Multiplier    float64       // Exponential backoff multiplier (default: 2.0)
+	Jitter        float64       // Random jitter factor (0.0 - 1.0) to avoid thundering herd (default: 0.1)
+	RetryOnStatus []int         // List of HTTP status codes that trigger a retry
+	RetryOnErrors []string      // List of error substrings that trigger a retry
 }
 
-// DefaultRetryConfig returns sensible defaults
+// DefaultRetryConfig returns a sensible default configuration for most use cases.
+// It retries on common transient errors (rate limits, timeouts, server errors).
 func DefaultRetryConfig() *RetryConfig {
 	return &RetryConfig{
 		MaxRetries:   3,
@@ -56,20 +58,23 @@ func DefaultRetryConfig() *RetryConfig {
 // Retry Builder Methods
 // ═══════════════════════════════════════════════════════════════════════════
 
-// RetryConfig sets a custom retry configuration on the builder
+// RetryConfig sets a custom retry configuration for the request.
+// This overrides any previous retry settings.
 func (b *Builder) RetryConfig(config *RetryConfig) *Builder {
 	b.retryConfig = config
 	return b
 }
 
-// RetryWithBackoff enables smart retry with exponential backoff
+// RetryWithBackoff enables smart retry with exponential backoff using default settings.
+// It allows specifying the maximum number of retries.
 func (b *Builder) RetryWithBackoff(maxRetries int) *Builder {
 	b.retryConfig = DefaultRetryConfig()
 	b.retryConfig.MaxRetries = maxRetries
 	return b
 }
 
-// NoRetry disables retries
+// NoRetry disables all retry logic for the request.
+// The request will fail immediately upon any error.
 func (b *Builder) NoRetry() *Builder {
 	b.retryConfig = nil
 	b.maxRetries = 0
@@ -80,7 +85,7 @@ func (b *Builder) NoRetry() *Builder {
 // Retry Logic
 // ═══════════════════════════════════════════════════════════════════════════
 
-// RetryInfo contains information about a retry attempt
+// RetryInfo contains metadata about the current state of a retry loop.
 type RetryInfo struct {
 	Attempt    int
 	MaxRetries int
@@ -89,7 +94,8 @@ type RetryInfo struct {
 	TotalTime  time.Duration
 }
 
-// calculateBackoff calculates the next delay with exponential backoff and jitter
+// calculateBackoff computes the delay for the next retry attempt.
+// It applies exponential backoff and random jitter.
 func calculateBackoff(config *RetryConfig, attempt int) time.Duration {
 	if config == nil {
 		return time.Second
@@ -118,7 +124,8 @@ func calculateBackoff(config *RetryConfig, attempt int) time.Duration {
 	return time.Duration(delay)
 }
 
-// shouldRetry determines if we should retry based on the error
+// shouldRetry determines if an error is transient and should trigger a retry.
+// It checks against configured status codes and error messages.
 func shouldRetry(config *RetryConfig, err error) bool {
 	if config == nil || err == nil {
 		return false
@@ -160,10 +167,11 @@ func shouldRetry(config *RetryConfig, err error) bool {
 // Retry Executor
 // ═══════════════════════════════════════════════════════════════════════════
 
-// RetryFunc is a function that can be retried
+// RetryFunc is the signature for a function that can be retried.
 type RetryFunc[T any] func() (T, error)
 
-// WithRetry executes a function with retry logic
+// WithRetry executes a function with automatic retries based on the configuration.
+// It handles context cancellation, backoff delays, and error checking.
 func WithRetry[T any](ctx context.Context, config *RetryConfig, fn RetryFunc[T]) (T, error) {
 	var zero T
 	if config == nil {
@@ -229,7 +237,7 @@ func WithRetry[T any](ctx context.Context, config *RetryConfig, fn RetryFunc[T])
 // Convenient Retry Wrappers
 // ═══════════════════════════════════════════════════════════════════════════
 
-// DoWithRetry executes a no-return function with retries
+// DoWithRetry executes a function that returns only an error, with retry logic.
 func DoWithRetry(ctx context.Context, config *RetryConfig, fn func() error) error {
 	_, err := WithRetry(ctx, config, func() (struct{}, error) {
 		return struct{}{}, fn()
@@ -241,36 +249,36 @@ func DoWithRetry(ctx context.Context, config *RetryConfig, fn func() error) erro
 // RetryConfig Builder Pattern
 // ═══════════════════════════════════════════════════════════════════════════
 
-// NewRetryConfig creates a new retry configuration with defaults
+// NewRetryConfig creates a new retry configuration initialized with defaults.
 func NewRetryConfig() *RetryConfig {
 	return DefaultRetryConfig()
 }
 
-// WithMaxRetries sets max retries
+// WithMaxRetries sets the maximum number of retry attempts.
 func (c *RetryConfig) WithMaxRetries(n int) *RetryConfig {
 	c.MaxRetries = n
 	return c
 }
 
-// WithInitialDelay sets initial delay
+// WithInitialDelay sets the delay before the first retry.
 func (c *RetryConfig) WithInitialDelay(d time.Duration) *RetryConfig {
 	c.InitialDelay = d
 	return c
 }
 
-// WithMaxDelay sets max delay cap
+// WithMaxDelay sets the maximum delay cap between retries.
 func (c *RetryConfig) WithMaxDelay(d time.Duration) *RetryConfig {
 	c.MaxDelay = d
 	return c
 }
 
-// WithMultiplier sets backoff multiplier
+// WithMultiplier sets the exponential backoff multiplier.
 func (c *RetryConfig) WithMultiplier(m float64) *RetryConfig {
 	c.Multiplier = m
 	return c
 }
 
-// WithJitter sets jitter factor (0-1)
+// WithJitter sets the jitter factor (0.0 to 1.0) to randomize delays.
 func (c *RetryConfig) WithJitter(j float64) *RetryConfig {
 	if j < 0 {
 		j = 0
@@ -282,13 +290,13 @@ func (c *RetryConfig) WithJitter(j float64) *RetryConfig {
 	return c
 }
 
-// WithRetryOnStatus adds status codes to retry on
+// WithRetryOnStatus adds HTTP status codes that should trigger a retry.
 func (c *RetryConfig) WithRetryOnStatus(codes ...int) *RetryConfig {
 	c.RetryOnStatus = append(c.RetryOnStatus, codes...)
 	return c
 }
 
-// WithRetryOnError adds error substrings to retry on
+// WithRetryOnError adds error message substrings that should trigger a retry.
 func (c *RetryConfig) WithRetryOnError(errors ...string) *RetryConfig {
 	c.RetryOnErrors = append(c.RetryOnErrors, errors...)
 	return c
@@ -298,7 +306,8 @@ func (c *RetryConfig) WithRetryOnError(errors ...string) *RetryConfig {
 // Retry Presets
 // ═══════════════════════════════════════════════════════════════════════════
 
-// AggressiveRetryConfig returns a config for aggressive retrying
+// AggressiveRetryConfig returns a configuration for aggressive retrying.
+// Short delays, high multiplier, suitable for high-throughput scenarios where speed matters.
 func AggressiveRetryConfig() *RetryConfig {
 	return &RetryConfig{
 		MaxRetries:   5,
@@ -325,7 +334,8 @@ func AggressiveRetryConfig() *RetryConfig {
 	}
 }
 
-// GentleRetryConfig returns a config for gentle retrying (longer delays)
+// GentleRetryConfig returns a configuration for gentle retrying.
+// Longer delays, suitable for background tasks or strictly rate-limited APIs.
 func GentleRetryConfig() *RetryConfig {
 	return &RetryConfig{
 		MaxRetries:   3,
@@ -344,7 +354,7 @@ func GentleRetryConfig() *RetryConfig {
 	}
 }
 
-// NoRetryConfig returns a config that never retries
+// NoRetryConfig returns a configuration that disables retries.
 func NoRetryConfig() *RetryConfig {
 	return &RetryConfig{
 		MaxRetries: 0,

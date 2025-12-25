@@ -18,13 +18,13 @@ import (
 
 const openRouterBaseURL = "https://openrouter.ai/api/v1"
 
-// OpenRouterProvider implements Provider for OpenRouter
+// OpenRouterProvider implements Provider for OpenRouter's API.
 type OpenRouterProvider struct {
 	config     ProviderConfig
 	httpClient *http.Client
 }
 
-// NewOpenRouterProvider creates an OpenRouter provider
+// NewOpenRouterProvider creates an OpenRouterProvider.
 func NewOpenRouterProvider(config ProviderConfig) *OpenRouterProvider {
 	if config.BaseURL == "" {
 		config.BaseURL = openRouterBaseURL
@@ -39,10 +39,12 @@ func NewOpenRouterProvider(config ProviderConfig) *OpenRouterProvider {
 	return &OpenRouterProvider{config: config, httpClient: client}
 }
 
+// Name returns the provider identifier ("openrouter").
 func (p *OpenRouterProvider) Name() string {
 	return "openrouter"
 }
 
+// Capabilities reports the features supported by this provider implementation.
 func (p *OpenRouterProvider) Capabilities() ProviderCapabilities {
 	return ProviderCapabilities{
 		Tools:     true,
@@ -57,6 +59,7 @@ func (p *OpenRouterProvider) Capabilities() ProviderCapabilities {
 // Send
 // ═══════════════════════════════════════════════════════════════════════════
 
+// Send executes a non-streaming request.
 func (p *OpenRouterProvider) Send(ctx context.Context, req *ProviderRequest) (*ProviderResponse, error) {
 	if p.config.APIKey == "" {
 		return nil, &ProviderError{
@@ -102,6 +105,7 @@ func (p *OpenRouterProvider) Send(ctx context.Context, req *ProviderRequest) (*P
 // SendStream
 // ═══════════════════════════════════════════════════════════════════════════
 
+// SendStream executes a streaming request and invokes callback for each chunk.
 func (p *OpenRouterProvider) SendStream(ctx context.Context, req *ProviderRequest, callback StreamCallback) (*ProviderResponse, error) {
 	if p.config.APIKey == "" {
 		return nil, &ProviderError{

@@ -9,10 +9,11 @@ import (
 // Rate Limiting
 // ═══════════════════════════════════════════════════════════════════════════
 
-// RateLimiter controls request rate
+// RateLimiter optionally limits request throughput for the whole package.
+// Set it to a Limiter implementation (for example, NewLimiter(60, time.Minute)).
 var RateLimiter Limiter
 
-// Limiter interface for rate limiting
+// Limiter is the interface implemented by rate limiters.
 type Limiter interface {
 	Wait()       // Block until request is allowed
 	Allow() bool // Check if request is allowed without blocking
@@ -22,7 +23,7 @@ type Limiter interface {
 // Token Bucket Rate Limiter
 // ═══════════════════════════════════════════════════════════════════════════
 
-// TokenBucket implements a token bucket rate limiter
+// TokenBucket implements a token bucket rate limiter.
 type TokenBucket struct {
 	rate       float64   // tokens per second
 	capacity   float64   // max tokens
@@ -31,7 +32,7 @@ type TokenBucket struct {
 	mu         sync.Mutex
 }
 
-// NewLimiter creates a rate limiter with specified requests per interval
+// NewLimiter creates a rate limiter with specified requests per interval.
 // Example: NewLimiter(60, time.Minute) = 60 requests per minute
 func NewLimiter(requests int, interval time.Duration) *TokenBucket {
 	rate := float64(requests) / interval.Seconds()
@@ -43,7 +44,7 @@ func NewLimiter(requests int, interval time.Duration) *TokenBucket {
 	}
 }
 
-// NewLimiterPerSecond creates a rate limiter with requests per second
+// NewLimiterPerSecond creates a rate limiter with requests per second.
 func NewLimiterPerSecond(rps float64) *TokenBucket {
 	return &TokenBucket{
 		rate:       rps,
@@ -53,7 +54,7 @@ func NewLimiterPerSecond(rps float64) *TokenBucket {
 	}
 }
 
-// Wait blocks until a request is allowed
+// Wait blocks until a request is allowed.
 func (tb *TokenBucket) Wait() {
 	for {
 		if tb.Allow() {
@@ -67,7 +68,7 @@ func (tb *TokenBucket) Wait() {
 	}
 }
 
-// Allow checks if request is allowed (non-blocking)
+// Allow checks if a request is allowed (non-blocking).
 func (tb *TokenBucket) Allow() bool {
 	tb.mu.Lock()
 	defer tb.mu.Unlock()
@@ -93,24 +94,24 @@ func (tb *TokenBucket) Allow() bool {
 // Concurrency Limiter
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ConcurrencyLimiter limits concurrent requests
+// ConcurrencyLimiter limits concurrent requests.
 type ConcurrencyLimiter struct {
 	sem chan struct{}
 }
 
-// NewConcurrencyLimiter creates a limiter for max concurrent requests
+// NewConcurrencyLimiter creates a limiter for max concurrent requests.
 func NewConcurrencyLimiter(maxConcurrent int) *ConcurrencyLimiter {
 	return &ConcurrencyLimiter{
 		sem: make(chan struct{}, maxConcurrent),
 	}
 }
 
-// Acquire blocks until a slot is available
+// Acquire blocks until a slot is available.
 func (cl *ConcurrencyLimiter) Acquire() {
 	cl.sem <- struct{}{}
 }
 
-// Release returns a slot
+// Release returns a slot.
 func (cl *ConcurrencyLimiter) Release() {
 	<-cl.sem
 }
